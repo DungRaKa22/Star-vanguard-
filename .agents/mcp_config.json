@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "UnityMCP": {
+      "serverUrl": "http://localhost:8080/mcp",
+      "timeoutSeconds": 300
+    }
+  }
+}
