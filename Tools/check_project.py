@@ -624,7 +624,7 @@ def check_dead_scripts(project: str, guid_to_asset: dict[str, str]) -> None:
 
     dead: list[str] = []
     for path, text in all_cs_text.items():
-        if "Editor" + os.sep in path:
+        if "Editor" + os.sep in path or "Tests" + os.sep in path:
             continue
         meta = path + ".meta"
         if not os.path.exists(meta):

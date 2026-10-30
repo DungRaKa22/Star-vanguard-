@@ -1,0 +1,26 @@
+{
+    "name": "StarVanguard.Editor",
+    "rootNamespace": "",
+    "references": [
+        "StarVanguard.Runtime",
+        "StarVanguard.UI",
+        "Unity.InputSystem",
+        "UnityEngine.UI",
+        "UnityEditor.UI",
+        "Unity.TextMeshPro",
+        "Unity.TextMeshPro.Editor",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.RenderPipelines.Universal.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

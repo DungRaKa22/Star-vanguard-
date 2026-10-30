@@ -1,0 +1,19 @@
+{
+    "name": "StarVanguard.UI",
+    "rootNamespace": "StarVanguard.UI",
+    "references": [
+        "StarVanguard.Runtime",
+        "UnityEngine.UI",
+        "Unity.TextMeshPro",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

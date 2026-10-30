@@ -1,0 +1,258 @@
+diff --git a/Star Vanguard/Assets/Scripts/UIManager.cs b/Star Vanguard/Assets/Scripts/UIManager.cs
+index fdb35d6..c037e54 100644
+--- a/Star Vanguard/Assets/Scripts/UIManager.cs	
++++ b/Star Vanguard/Assets/Scripts/UIManager.cs
+@@ -1,7 +1,7 @@
+-using StarVanguard.UI;
++using System;
++using System.Collections.Generic;
+ using TMPro;
+ using UnityEngine;
+-using System.Collections.Generic;
+ 
+ [SceneBoundSingleton]
+ public class UIManager : Singleton<UIManager>
+@@ -10,6 +10,16 @@ public class UIManager : Singleton<UIManager>
+     // instead of keeping stale references to destroyed GameObjects.
+     protected override bool PersistAcrossScenes => false;
+ 
++    #region UI Navigation Events
++    public static event Action OnShowSettingsRequested;
++    public static event Action OnHideSettingsRequested;
++    public static event Action OnShowControlsRequested;
++    public static event Action OnHideControlsRequested;
++    public static event Action OnShowAudioSettingsRequested;
++    public static event Action OnHideSubPanelsRequested;
++    public static event Action OnHideAllPanelsRequested;
++    #endregion
++
+     [Header("HUD Elements")]
+     [SerializeField] private TextMeshProUGUI m_ScoreText;
+     
+@@ -65,10 +75,7 @@ public class UIManager : Singleton<UIManager>
+     {
+         base.OnDestroy(); // Clear the Singleton instance reference
+ 
+-        if (GameManager.HasInstance)
+-        {
+-            GameManager.OnGameStateChanged -= showState;
+-        }
++        GameManager.OnGameStateChanged -= showState;
+         
+         // Clear references without querying PoolManager when scene is unloading
+         m_HeartInstances.Clear();
+@@ -157,18 +164,17 @@ public class UIManager : Singleton<UIManager>
+             m_HUDContainer.SetActive(willBePlaying);
+         }
+ 
+-        // Show appropriate panel for current state
++        // Handle gameplay state transitions
+         switch (i_GameState)
+         {
+             case eGameState.Menu:
+-                // MainMenuScreen owns the menu; the router decides what is visible.
+-                ShowPanel(UIPanelId.Home);
++                SetPanelActive(m_HomeScreenPanel, true);
+                 break;
+             case eGameState.Paused:
+-                ShowPanel(UIPanelId.Pause);
++                SetPanelActive(m_PausePanel, true);
+                 break;
+             case eGameState.GameOver:
+-                ShowPanel(UIPanelId.GameOver);
++                SetPanelActive(m_GameOverPanel, true);
+                 break;
+             case eGameState.Playing:
+                 // No panels active during gameplay, but HUD is visible
+@@ -179,13 +185,7 @@ public class UIManager : Singleton<UIManager>
+ 
+     private void hideAllPanels()
+     {
+-        if (UIPanelRouter.Instance != null)
+-        {
+-            UIPanelRouter.Instance.HideAll();
+-            return;
+-        }
+-
+-        // Fallback for the very first frame, before the router has registered panels.
++        // Fallback for serialized scene panels if assigned
+         SetPanelActive(m_GameOverPanel, false);
+         SetPanelActive(m_PausePanel, false);
+         SetPanelActive(m_HomeScreenPanel, false);
+@@ -193,22 +193,6 @@ public class UIManager : Singleton<UIManager>
+         SetPanelActive(m_SettingsPanel, false);
+     }
+ 
+-    private static void ShowPanel(UIPanelId i_Id)
+-    {
+-        if (UIPanelRouter.Instance != null)
+-        {
+-            UIPanelRouter.Instance.Show(i_Id);
+-        }
+-    }
+-
+-    private static void PushPanel(UIPanelId i_Id)
+-    {
+-        if (UIPanelRouter.Instance != null)
+-        {
+-            UIPanelRouter.Instance.Push(i_Id);
+-        }
+-    }
+-
+     /// <summary>
+     /// Destroys-safe SetActive. Using "panel?.SetActive()" is NOT safe in Unity:
+     /// the null-conditional operator bypasses Unity's destroyed-object check and throws
+@@ -326,27 +310,39 @@ public class UIManager : Singleton<UIManager>
+ 
+     public void ShowControlsPanel()
+     {
+-        PushPanel(UIPanelId.Controls);
++        OnShowControlsRequested?.Invoke();
+     }
+ 
+     public void HideControlsPanel()
+     {
+-        if (UIPanelRouter.Instance != null && UIPanelRouter.Instance.Current == UIPanelId.Controls)
+-        {
+-            UIPanelRouter.Instance.Back();
+-        }
++        OnHideControlsRequested?.Invoke();
++        OnHideSubPanelsRequested?.Invoke();
+     }
+ 
+     public void ShowSettingsPanel()
+     {
+-        PushPanel(UIPanelId.Settings);
++        OnShowSettingsRequested?.Invoke();
+     }
+ 
+     public void HideSettingsPanel()
+     {
+-        if (UIPanelRouter.Instance != null && UIPanelRouter.Instance.Current == UIPanelId.Settings)
+-        {
+-            UIPanelRouter.Instance.Back();
+-        }
++        OnHideSettingsRequested?.Invoke();
++        OnHideSubPanelsRequested?.Invoke();
++    }
++
++    public void ShowAudioSettingsPanel()
++    {
++        OnShowAudioSettingsRequested?.Invoke();
++    }
++
++    public void HideSubPanels()
++    {
++        OnHideSubPanelsRequested?.Invoke();
++    }
++
++    public void HideAllPanels()
++    {
++        OnHideAllPanelsRequested?.Invoke();
++        hideAllPanels();
+     }
+ }
+diff --git a/Star Vanguard/Assets/Scripts/UI/UIPanelRouter.cs b/Star Vanguard/Assets/Scripts/UI/UIPanelRouter.cs
+index 3a00a1a..80a3580 100644
+--- a/Star Vanguard/Assets/Scripts/UI/UIPanelRouter.cs	
++++ b/Star Vanguard/Assets/Scripts/UI/UIPanelRouter.cs
+@@ -66,6 +66,39 @@ namespace StarVanguard.UI
+             DiscoverPanels();
+         }
+ 
++        private void OnEnable()
++        {
++            GameManager.OnGameStateChanged += HandleGameStateChanged;
++            UIManager.OnShowSettingsRequested += HandleShowSettings;
++            UIManager.OnHideSettingsRequested += HandleHideSettings;
++            UIManager.OnShowControlsRequested += HandleShowControls;
++            UIManager.OnHideControlsRequested += HandleHideControls;
++            UIManager.OnShowAudioSettingsRequested += HandleShowAudioSettings;
++            UIManager.OnHideSubPanelsRequested += HandleHideSubPanels;
++            UIManager.OnHideAllPanelsRequested += HandleHideAll;
++        }
++
++        private void OnDisable()
++        {
++            GameManager.OnGameStateChanged -= HandleGameStateChanged;
++            UIManager.OnShowSettingsRequested -= HandleShowSettings;
++            UIManager.OnHideSettingsRequested -= HandleHideSettings;
++            UIManager.OnShowControlsRequested -= HandleShowControls;
++            UIManager.OnHideControlsRequested -= HandleHideControls;
++            UIManager.OnShowAudioSettingsRequested -= HandleShowAudioSettings;
++            UIManager.OnHideSubPanelsRequested -= HandleHideSubPanels;
++            UIManager.OnHideAllPanelsRequested -= HandleHideAll;
++        }
++
++        private void Start()
++        {
++            // Sync with current game state on startup if no panel is currently active
++            if (GameManager.Instance != null && m_Stack.Count == 0)
++            {
++                HandleGameStateChanged(GameManager.Instance.GameState);
++            }
++        }
++
+         private void OnDestroy()
+         {
+             if (Instance == this)
+@@ -180,6 +213,59 @@ namespace StarVanguard.UI
+             ApplyVisibility(UIPanelId.None);
+         }
+ 
++        #region Navigation Event Handlers
++        private void HandleGameStateChanged(eGameState i_State)
++        {
++            switch (i_State)
++            {
++                case eGameState.Menu:
++                    Show(UIPanelId.Home);
++                    break;
++                case eGameState.Paused:
++                    Show(UIPanelId.Pause);
++                    break;
++                case eGameState.GameOver:
++                    Show(UIPanelId.GameOver);
++                    break;
++                case eGameState.Playing:
++                    HideAll();
++                    break;
++            }
++        }
++
++        private void HandleShowSettings() => Push(UIPanelId.Settings);
++
++        private void HandleHideSettings()
++        {
++            if (Current == UIPanelId.Settings)
++            {
++                Back();
++            }
++        }
++
++        private void HandleShowControls() => Push(UIPanelId.Controls);
++
++        private void HandleHideControls()
++        {
++            if (Current == UIPanelId.Controls)
++            {
++                Back();
++            }
++        }
++
++        private void HandleShowAudioSettings() => Push(UIPanelId.Settings);
++
++        private void HandleHideSubPanels()
++        {
++            if (Current == UIPanelId.Settings || Current == UIPanelId.Controls)
++            {
++                Back();
++            }
++        }
++
++        private void HandleHideAll() => HideAll();
++        #endregion
++
+         private void ApplyVisibility(UIPanelId i_Visible)
+         {
+             foreach (UIPanelId id in m_Panels.Keys)

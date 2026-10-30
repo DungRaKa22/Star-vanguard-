@@ -66,6 +66,39 @@ namespace StarVanguard.UI
             DiscoverPanels();
         }
 
+        private void OnEnable()
+        {
+            GameManager.OnGameStateChanged += HandleGameStateChanged;
+            UIManager.OnShowSettingsRequested += HandleShowSettings;
+            UIManager.OnHideSettingsRequested += HandleHideSettings;
+            UIManager.OnShowControlsRequested += HandleShowControls;
+            UIManager.OnHideControlsRequested += HandleHideControls;
+            UIManager.OnShowAudioSettingsRequested += HandleShowAudioSettings;
+            UIManager.OnHideSubPanelsRequested += HandleHideSubPanels;
+            UIManager.OnHideAllPanelsRequested += HandleHideAll;
+        }
+
+        private void OnDisable()
+        {
+            GameManager.OnGameStateChanged -= HandleGameStateChanged;
+            UIManager.OnShowSettingsRequested -= HandleShowSettings;
+            UIManager.OnHideSettingsRequested -= HandleHideSettings;
+            UIManager.OnShowControlsRequested -= HandleShowControls;
+            UIManager.OnHideControlsRequested -= HandleHideControls;
+            UIManager.OnShowAudioSettingsRequested -= HandleShowAudioSettings;
+            UIManager.OnHideSubPanelsRequested -= HandleHideSubPanels;
+            UIManager.OnHideAllPanelsRequested -= HandleHideAll;
+        }
+
+        private void Start()
+        {
+            // Sync with current game state on startup if no panel is currently active
+            if (GameManager.Instance != null && m_Stack.Count == 0)
+            {
+                HandleGameStateChanged(GameManager.Instance.GameState);
+            }
+        }
+
         private void OnDestroy()
         {
             if (Instance == this)
@@ -179,6 +212,59 @@ namespace StarVanguard.UI
             m_Stack.Clear();
             ApplyVisibility(UIPanelId.None);
         }
+
+        #region Navigation Event Handlers
+        private void HandleGameStateChanged(eGameState i_State)
+        {
+            switch (i_State)
+            {
+                case eGameState.Menu:
+                    Show(UIPanelId.Home);
+                    break;
+                case eGameState.Paused:
+                    Show(UIPanelId.Pause);
+                    break;
+                case eGameState.GameOver:
+                    Show(UIPanelId.GameOver);
+                    break;
+                case eGameState.Playing:
+                    HideAll();
+                    break;
+            }
+        }
+
+        private void HandleShowSettings() => Push(UIPanelId.Settings);
+
+        private void HandleHideSettings()
+        {
+            if (Current == UIPanelId.Settings)
+            {
+                Back();
+            }
+        }
+
+        private void HandleShowControls() => Push(UIPanelId.Controls);
+
+        private void HandleHideControls()
+        {
+            if (Current == UIPanelId.Controls)
+            {
+                Back();
+            }
+        }
+
+        private void HandleShowAudioSettings() => Push(UIPanelId.Settings);
+
+        private void HandleHideSubPanels()
+        {
+            if (Current == UIPanelId.Settings || Current == UIPanelId.Controls)
+            {
+                Back();
+            }
+        }
+
+        private void HandleHideAll() => HideAll();
+        #endregion
 
         private void ApplyVisibility(UIPanelId i_Visible)
         {

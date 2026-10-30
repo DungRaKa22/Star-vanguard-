@@ -1,7 +1,7 @@
-using StarVanguard.UI;
+using System;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
-using System.Collections.Generic;
 
 [SceneBoundSingleton]
 public class UIManager : Singleton<UIManager>
@@ -9,6 +9,16 @@ public class UIManager : Singleton<UIManager>
     // Panels/HUD live inside the scene, so this manager must die with the scene
     // instead of keeping stale references to destroyed GameObjects.
     protected override bool PersistAcrossScenes => false;
+
+    #region UI Navigation Events
+    public static event Action OnShowSettingsRequested;
+    public static event Action OnHideSettingsRequested;
+    public static event Action OnShowControlsRequested;
+    public static event Action OnHideControlsRequested;
+    public static event Action OnShowAudioSettingsRequested;
+    public static event Action OnHideSubPanelsRequested;
+    public static event Action OnHideAllPanelsRequested;
+    #endregion
 
     [Header("HUD Elements")]
     [SerializeField] private TextMeshProUGUI m_ScoreText;
@@ -65,10 +75,7 @@ public class UIManager : Singleton<UIManager>
     {
         base.OnDestroy(); // Clear the Singleton instance reference
 
-        if (GameManager.HasInstance)
-        {
-            GameManager.OnGameStateChanged -= showState;
-        }
+        GameManager.OnGameStateChanged -= showState;
         
         // Clear references without querying PoolManager when scene is unloading
         m_HeartInstances.Clear();
@@ -157,18 +164,17 @@ public class UIManager : Singleton<UIManager>
             m_HUDContainer.SetActive(willBePlaying);
         }
 
-        // Show appropriate panel for current state
+        // Handle gameplay state transitions
         switch (i_GameState)
         {
             case eGameState.Menu:
-                // MainMenuScreen owns the menu; the router decides what is visible.
-                ShowPanel(UIPanelId.Home);
+                SetPanelActive(m_HomeScreenPanel, true);
                 break;
             case eGameState.Paused:
-                ShowPanel(UIPanelId.Pause);
+                SetPanelActive(m_PausePanel, true);
                 break;
             case eGameState.GameOver:
-                ShowPanel(UIPanelId.GameOver);
+                SetPanelActive(m_GameOverPanel, true);
                 break;
             case eGameState.Playing:
                 // No panels active during gameplay, but HUD is visible
@@ -179,34 +185,12 @@ public class UIManager : Singleton<UIManager>
 
     private void hideAllPanels()
     {
-        if (UIPanelRouter.Instance != null)
-        {
-            UIPanelRouter.Instance.HideAll();
-            return;
-        }
-
-        // Fallback for the very first frame, before the router has registered panels.
+        // Fallback for serialized scene panels if assigned
         SetPanelActive(m_GameOverPanel, false);
         SetPanelActive(m_PausePanel, false);
         SetPanelActive(m_HomeScreenPanel, false);
         SetPanelActive(m_ControlsPanel, false);
         SetPanelActive(m_SettingsPanel, false);
-    }
-
-    private static void ShowPanel(UIPanelId i_Id)
-    {
-        if (UIPanelRouter.Instance != null)
-        {
-            UIPanelRouter.Instance.Show(i_Id);
-        }
-    }
-
-    private static void PushPanel(UIPanelId i_Id)
-    {
-        if (UIPanelRouter.Instance != null)
-        {
-            UIPanelRouter.Instance.Push(i_Id);
-        }
     }
 
     /// <summary>
@@ -326,21 +310,39 @@ public class UIManager : Singleton<UIManager>
 
     public void ShowControlsPanel()
     {
-        PushPanel(UIPanelId.Controls);
+        OnShowControlsRequested?.Invoke();
     }
 
     public void HideControlsPanel()
     {
-        UIPanelRouter.Instance?.Back();
+        OnHideControlsRequested?.Invoke();
+        OnHideSubPanelsRequested?.Invoke();
     }
 
     public void ShowSettingsPanel()
     {
-        PushPanel(UIPanelId.Settings);
+        OnShowSettingsRequested?.Invoke();
     }
 
     public void HideSettingsPanel()
     {
-        UIPanelRouter.Instance?.Back();
+        OnHideSettingsRequested?.Invoke();
+        OnHideSubPanelsRequested?.Invoke();
+    }
+
+    public void ShowAudioSettingsPanel()
+    {
+        OnShowAudioSettingsRequested?.Invoke();
+    }
+
+    public void HideSubPanels()
+    {
+        OnHideSubPanelsRequested?.Invoke();
+    }
+
+    public void HideAllPanels()
+    {
+        OnHideAllPanelsRequested?.Invoke();
+        hideAllPanels();
     }
 }

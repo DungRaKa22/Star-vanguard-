@@ -49,7 +49,9 @@ namespace StarVanguard.EditorTools
             "PausePanel",
             "GameOverPanel",
             "NewHighScorePanel",
-            "InterWaveMessagePanel"
+            "InterWaveMessagePanel",
+            "Main Camera",
+            "Global Light 2D"
         };
 
         [MenuItem("Star Vanguard/Maintenance/Setup Bootstrap Scene")]

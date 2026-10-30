@@ -15,11 +15,14 @@ namespace StarVanguard.EditorTools
     {
         private const string k_PlayerPrefabPath = "Assets/Prefabs/Player_Prefab.prefab";
         private const string k_BossPrefabPath = "Assets/Prefabs/Boss_Prefab.prefab";
+        private const string k_BootstrapScenePath = "Assets/Scenes/BootstrapScene.unity";
         private const string k_GameplayScenePath = "Assets/Scenes/GameplayScene.unity";
 
         private static int s_Passed;
         private static int s_Failed;
 
+        [MenuItem("Star Vanguard/Validate Project", priority = 50)]
+        [MenuItem("Tools/Star Vanguard/Validate Project", priority = 50)]
         public static void ValidateAll()
         {
             s_Passed = 0;
@@ -35,7 +38,10 @@ namespace StarVanguard.EditorTools
 
             Debug.Log($"[STARVANGUARD-CHECK] SUMMARY passed={s_Passed} failed={s_Failed}");
 
-            EditorApplication.Exit(s_Failed == 0 ? 0 : 1);
+            if (Application.isBatchMode)
+            {
+                EditorApplication.Exit(s_Failed == 0 ? 0 : 1);
+            }
         }
 
         // ---------------------------------------------------------------- checks
@@ -122,21 +128,26 @@ namespace StarVanguard.EditorTools
         private static void CheckBuildSettings()
         {
             EditorBuildSettingsScene[] scenes = EditorBuildSettings.scenes;
-            Assert(scenes.Length >= 2, $"build settings contain >= 2 scenes (n={scenes.Length})");
+            Assert(scenes.Length >= 3, $"build settings contain >= 3 scenes (n={scenes.Length})");
 
-            if (scenes.Length >= 2)
+            if (scenes.Length >= 3)
             {
-                Assert(scenes[0].path.EndsWith("MainMenuScene.unity"),
-                    $"build index 0 is MainMenuScene ({scenes[0].path})");
-                Assert(scenes[1].path.EndsWith("GameplayScene.unity"),
-                    $"build index 1 is GameplayScene ({scenes[1].path})");
+                Assert(scenes[0].path.EndsWith("BootstrapScene.unity"),
+                    $"build index 0 is BootstrapScene ({scenes[0].path})");
+                Assert(scenes[1].path.EndsWith("MainMenuScene.unity"),
+                    $"build index 1 is MainMenuScene ({scenes[1].path})");
+                Assert(scenes[2].path.EndsWith("GameplayScene.unity"),
+                    $"build index 2 is GameplayScene ({scenes[2].path})");
             }
         }
 
         private static void CheckGameplayScene()
         {
-            var scene = EditorSceneManager.OpenScene(k_GameplayScenePath, OpenSceneMode.Single);
-            Assert(scene.IsValid(), "GameplayScene opens");
+            var bootScene = EditorSceneManager.OpenScene(k_BootstrapScenePath, OpenSceneMode.Single);
+            Assert(bootScene.IsValid(), "BootstrapScene opens");
+
+            var gameScene = EditorSceneManager.OpenScene(k_GameplayScenePath, OpenSceneMode.Additive);
+            Assert(gameScene.IsValid(), "GameplayScene opens additively");
 
             Assert(Object.FindAnyObjectByType<GameManager>() != null, "GameplayScene has GameManager");
             Assert(Object.FindAnyObjectByType<UIManager>() != null, "GameplayScene has UIManager");
