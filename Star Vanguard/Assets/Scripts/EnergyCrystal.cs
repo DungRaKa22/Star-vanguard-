@@ -1,0 +1,249 @@
+using UnityEngine;
+
+/// <summary>
+/// Energy Crystal collectible dropped by enemies and bosses.
+/// Refactored from legacy Food pickup for Star Vanguard.
+/// </summary>
+public class EnergyCrystal : MonoBehaviour, IPoolable
+{
+    [SerializeField ]private Rigidbody2D m_Rigidbody;
+    
+    [Header("Physics")]
+    [SerializeField] private float m_EjectionForceMin = 150f;
+    [SerializeField] private float m_EjectionForceMax = 300f;
+    [SerializeField] private float m_BounceDamping = 0.6f;
+    [SerializeField] private float m_MinVelocityThreshold = 0.5f;
+    [SerializeField] private float m_FrictionForce = 5f;
+    
+    [Header("Collection")]
+    [SerializeField] private float m_FallSpeed = 2f;
+    [SerializeField] private float m_SettleTime = 1f;
+    [SerializeField] private float m_LifeTime = 7f; // Total time before food disappears if not collected
+    
+    private bool m_IsPhysicsActive = true;
+    private bool m_IsGrounded;
+    private float m_SettleTimer;
+    private float m_LifeTimer; 
+    private Camera m_Camera;
+    private float m_GroundY;
+    
+    private void Awake()
+    {
+        m_Camera = Camera.main;
+        
+        // Configure rigidbody for realistic physics
+        m_Rigidbody.gravityScale = 1f; // Use Unity's gravity
+        m_Rigidbody.linearDamping = 0.5f; // Air resistance
+        m_Rigidbody.angularDamping = 0.8f; // Rotation resistance
+        m_Rigidbody.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+    }
+    
+    private void Start()
+    {
+        // Calculate ground level (bottom of screen)
+        m_GroundY = m_Camera.ViewportToWorldPoint(new Vector3(0, 0.1f, 0)).y;
+        
+        // Initialize with random ejection force
+        initializePhysics();
+    }
+    
+    public void OnPoolGet()
+    {
+        // Reset physics state when retrieved from pool
+        m_IsPhysicsActive = true;
+        m_IsGrounded = false;
+        m_SettleTimer = 0f;
+        m_LifeTimer = 0f; // Reset single lifetime timer
+        
+        // Reset rigidbody
+        if (m_Rigidbody)
+        {
+            m_Rigidbody.linearVelocity = Vector2.zero;
+            m_Rigidbody.angularVelocity = 0f;
+            m_Rigidbody.gravityScale = 1f;
+        }
+        
+        // Calculate ground level (in case screen size changed)
+        ensureCamera();
+        if (m_Camera) m_GroundY = m_Camera.ViewportToWorldPoint(new Vector3(0, 0.1f, 0)).y;
+        
+        // Initialize physics for new spawn
+        initializePhysics();
+    }
+    
+    public void OnPoolReturn()
+    {
+        // Clean up state before returning to pool
+        m_IsPhysicsActive = false;
+        if (m_Rigidbody)
+        {
+            m_Rigidbody.linearVelocity = Vector2.zero;
+            m_Rigidbody.angularVelocity = 0f;
+        }
+    }
+    
+    private void initializePhysics()
+    {
+        if (!m_Rigidbody) return;
+        
+        // Random ejection direction (slightly upward and outward)
+        float angle = Random.Range(-60f, 60f); // Angle in degrees from straight up
+        float force = Random.Range(m_EjectionForceMin, m_EjectionForceMax);
+        
+        Vector2 direction = new Vector2(
+            Mathf.Sin(angle * Mathf.Deg2Rad),
+            Mathf.Abs(Mathf.Cos(angle * Mathf.Deg2Rad)) // Always upward component
+        );
+        
+        // Apply initial ejection force
+        m_Rigidbody.AddForce(direction * force, ForceMode2D.Impulse);
+        
+        // Add some random spin for visual appeal
+        float randomTorque = Random.Range(-800f, 800f);
+        m_Rigidbody.AddTorque(randomTorque);
+    }
+    
+    private void FixedUpdate()
+    {
+        ensureCamera();
+
+        m_LifeTimer += Time.fixedDeltaTime;
+        if (m_LifeTimer >= m_LifeTime)
+        {
+            PoolManager.Instance?.ReturnCrystal(this);
+            return;
+        }
+        
+        if (m_IsPhysicsActive)
+        {
+            updatePhysics();
+        }
+        else
+        {
+            // Simple downward movement like other pickups when physics are done
+            // Use MovePosition for physics consistency
+            m_Rigidbody.MovePosition(m_Rigidbody.position +  m_FallSpeed * Time.fixedDeltaTime * Vector2.down);
+        }
+    }
+    
+    
+    private void updatePhysics()
+    {
+        if (!m_Rigidbody) return;
+        
+        // Apply horizontal friction if grounded and moving slowly horizontally
+        if (m_IsGrounded && Mathf.Abs(m_Rigidbody.linearVelocity.x) > 0.1f)
+        {
+            Vector2 frictionForce =  m_FrictionForce * Time.fixedDeltaTime * -m_Rigidbody.linearVelocity.normalized;
+            frictionForce.y = 0; // Only apply friction horizontally
+            m_Rigidbody.AddForce(frictionForce, ForceMode2D.Force);
+        }
+        
+        // Check ground collision
+        if (transform.position.y <= m_GroundY && m_Rigidbody.linearVelocity.y <= 0)
+        {
+            if (!m_IsGrounded)
+            {
+                // First time hitting ground - apply bounce
+                Vector2 currentVelocity = m_Rigidbody.linearVelocity;
+                currentVelocity.y = -currentVelocity.y * m_BounceDamping;
+                m_Rigidbody.linearVelocity = currentVelocity;
+                m_IsGrounded = true;
+            }
+            
+            // Clamp position to ground
+            Vector3 pos = transform.position;
+            pos.y = m_GroundY;
+            transform.position = pos;
+            
+            // If velocity is low enough, start settling
+            if (m_Rigidbody.linearVelocity.magnitude < m_MinVelocityThreshold)
+            {
+                m_SettleTimer += Time.fixedDeltaTime;
+                if (m_SettleTimer >= m_SettleTime)
+                {
+                    m_IsPhysicsActive = false;
+                    // Disable gravity for settled food
+                    m_Rigidbody.gravityScale = 0f;
+                    m_Rigidbody.linearVelocity = Vector2.zero;
+                }
+            }
+        }
+        else
+        {
+            m_IsGrounded = false;
+        }
+        
+        // Handle screen boundaries
+        handleScreenBounds();
+    }
+    
+    /// <summary>
+    /// Crystals are pooled and can outlive the camera of the scene that created them.
+    /// </summary>
+    private void ensureCamera()
+    {
+        if (m_Camera == null) m_Camera = Camera.main;
+    }
+
+    private void handleScreenBounds()
+    {
+        if (!m_Rigidbody || !m_Camera) return;
+        
+        Vector3 viewportPos = m_Camera.WorldToViewportPoint(transform.position);
+        
+        // Bounce off left and right walls
+        if (viewportPos.x <= 0.05f && m_Rigidbody.linearVelocity.x < 0)
+        {
+            Vector2 velocity = m_Rigidbody.linearVelocity;
+            velocity.x = -velocity.x * m_BounceDamping;
+            m_Rigidbody.linearVelocity = velocity;
+            
+            // Clamp position to boundary
+            Vector3 pos = transform.position;
+            pos.x = m_Camera.ViewportToWorldPoint(new Vector3(0.05f, 0, 0)).x;
+            transform.position = pos;
+        }
+        else if (viewportPos.x >= 0.95f && m_Rigidbody.linearVelocity.x > 0)
+        {
+            Vector2 velocity = m_Rigidbody.linearVelocity;
+            velocity.x = -velocity.x * m_BounceDamping;
+            m_Rigidbody.linearVelocity = velocity;
+            
+            // Clamp position to boundary
+            Vector3 pos = transform.position;
+            pos.x = m_Camera.ViewportToWorldPoint(new Vector3(0.95f, 0, 0)).x;
+            transform.position = pos;
+        }
+    }
+    
+    private void OnTriggerEnter2D(Collider2D i_Other)
+    {
+        // Only the player ship may collect crystals. Enemies, bullets and other
+        // pickups must not consume them or award score.
+        var playerStats = i_Other.GetComponentInParent<PlayerStats>();
+        if (playerStats == null && !i_Other.CompareTag("Player"))
+        {
+            return;
+        }
+
+        // Grant crystal charge towards Plasma Bomb (50 crystals = 1 bomb)
+        if (playerStats != null)
+        {
+            playerStats.AddCrystalCharge(1);
+        }
+
+        // Grant 50 points for crystal collection
+        GameManager.Instance?.AddScore(50);
+        
+        AudioManager.Instance?.Play(eSFXId.Eat, 0.5f);
+        
+        PoolManager.Instance?.ReturnCrystal(this);
+    }
+}
+
+/// <summary>
+/// Backwards-compatibility alias for legacy scenes/scripts referencing Food.
+/// </summary>
+[System.Obsolete("Use EnergyCrystal instead")]
+public class Food : EnergyCrystal {}
