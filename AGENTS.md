@@ -59,15 +59,15 @@ COMMIT → "T-xxx: mô tả ngắn" (1 mục đích / commit), cập nhật docs
 
 | Vị trí | Vấn đề | Task |
 | :--- | :--- | :--- |
-| `UIManager.cs:51,57` | tự `AddComponent` component UI lúc runtime | T-201 |
-| `OverheatGaugeUI.cs` | HUD vẽ bằng `OnGUI`, GC mỗi frame, emoji không có glyph | T-201 |
+| ~~`UIManager.cs:51,57`~~ | ✅ đã bỏ AddComponent runtime | T-201 (xong) |
+| ~~`OverheatGaugeUI.cs`~~ | ✅ đã chuyển sang uGUI Zero-GC | T-201 (xong) |
 | ~~`Assets/Scripts/Networking/*`~~ | ✅ đã xoá theo ADR-001 | T-202 (xong) |
 | `AudioManager.cs:85-92` | 1 AudioSource + đổi pitch toàn cục | T-302 |
 | `Bomb.cs:47-59`, `PoolManager.cs:217-278` | `FindObjectsByType` trong luồng gameplay | T-305 |
 | `PlayerShooting.cs:202` | `new float[]` mỗi phát Plasma | T-305 |
 | `GameManager.cs:53-56, 97-100` | ép `SetResolution` 2 lần, bỏ qua setting người chơi | T-304 |
-| `MainMenuScene.unity` (12.8k dòng) | UI dựng bằng code, scene phình to | T-401 |
-| `ControlsPanelController.cs` | dead code | T-402 |
+| ~~`MainMenuScene.unity` (12.8k dòng)~~ | ✅ đóng gói UI prefabs, scene còn 1853 dòng | T-401 (xong) |
+| ~~`ControlsPanelController.cs`~~ | ✅ đã xoá dead code | T-402 (xong) |
 | `MainMenuScene` còn `CoopPanel/CoopCard/CoopButton` | object UI chết, cần dọn bằng menu Editor | T-204 |
 
 ## 6. An toàn & Git

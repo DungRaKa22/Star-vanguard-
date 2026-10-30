@@ -39,9 +39,6 @@ public class UIManager : Singleton<UIManager>
     [Header("HUD Container")]
     [SerializeField] private GameObject m_HUDContainer; // Parent container for all HUD elements
     
-    [Header("Overheat & Energy HUD (REA Spec)")]
-    [SerializeField] private OverheatGaugeUI m_OverheatGaugeUI;
-
     [Header("UI Panels")]
     [SerializeField] private GameObject m_GameOverPanel;
     [SerializeField] private GameObject m_PausePanel;
@@ -53,13 +50,6 @@ public class UIManager : Singleton<UIManager>
     {
         // Fix Canvas scale issue that can make UI invisible
         FixCanvasScaleIssue();
-
-        // Ensure Overheat HUD is active
-        if (!m_OverheatGaugeUI)
-        {
-            m_OverheatGaugeUI = GetComponent<OverheatGaugeUI>() ?? gameObject.AddComponent<OverheatGaugeUI>();
-        }
-
         // Initialize all panels as inactive
         hideAllPanels();
         

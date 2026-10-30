@@ -1,3 +1,4 @@
+using Type = System.Type;
 using StarVanguard.UI;
 using System.Collections.Generic;
 using System.Reflection;
@@ -256,6 +257,63 @@ namespace StarVanguard.EditorTools
             {
                 float height = settings.rect.height;
                 Assert(height <= 1080f, $"SettingsPanel fits the screen (height={height:F0})");
+            }
+
+            // Empirical challenge of SettingsUI and audio sliders in live PlayMode
+            SettingsUI settingsUI = Object.FindAnyObjectByType<SettingsUI>();
+            if (Assert(settingsUI != null, "SettingsUI exists and is active on SettingsPanel"))
+            {
+                Assert(SettingsManager.Instance != null, "SettingsManager.Instance is available in PlayMode");
+
+                Type sType = typeof(SettingsUI);
+                Slider masterSlider = sType.GetField("m_MasterVolumeSlider", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(settingsUI) as Slider;
+                Slider sfxSlider = sType.GetField("m_SFXVolumeSlider", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(settingsUI) as Slider;
+                Slider musicSlider = sType.GetField("m_MusicVolumeSlider", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(settingsUI) as Slider;
+                Button resetBtn = sType.GetField("m_ResetToDefaultsButton", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(settingsUI) as Button;
+                Toggle mouseControlsToggle = sType.GetField("m_MouseControlsToggle", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(settingsUI) as Toggle;
+
+                Assert(masterSlider != null, "SettingsUI.m_MasterVolumeSlider is bound");
+                Assert(sfxSlider != null, "SettingsUI.m_SFXVolumeSlider is bound");
+                Assert(musicSlider != null, "SettingsUI.m_MusicVolumeSlider is bound");
+
+                if (masterSlider != null && SettingsManager.Instance != null)
+                {
+                    masterSlider.value = 0.5f;
+                    Assert(Mathf.Approximately(SettingsManager.Instance.MasterVolume, 0.5f),
+                        $"SettingsManager.MasterVolume updated by slider to 0.5f (actual={SettingsManager.Instance.MasterVolume})");
+                }
+
+                if (sfxSlider != null && SettingsManager.Instance != null)
+                {
+                    sfxSlider.value = 0.45f;
+                    Assert(Mathf.Approximately(SettingsManager.Instance.SFXVolume, 0.45f),
+                        $"SettingsManager.SFXVolume updated by slider to 0.45f (actual={SettingsManager.Instance.SFXVolume})");
+                }
+
+                if (musicSlider != null && SettingsManager.Instance != null)
+                {
+                    musicSlider.value = 0.65f;
+                    Assert(Mathf.Approximately(SettingsManager.Instance.MusicVolume, 0.65f),
+                        $"SettingsManager.MusicVolume updated by slider to 0.65f (actual={SettingsManager.Instance.MusicVolume})");
+                }
+
+                if (mouseControlsToggle != null && SettingsManager.Instance != null)
+                {
+                    mouseControlsToggle.isOn = false;
+                    Assert(SettingsManager.Instance.UseMouseControls == false,
+                        "SettingsManager.UseMouseControls updated by toggle to false");
+                }
+
+                if (resetBtn != null && SettingsManager.Instance != null)
+                {
+                    resetBtn.onClick.Invoke();
+                    Assert(Mathf.Approximately(SettingsManager.Instance.MasterVolume, 1.0f),
+                        "Reset defaults restores MasterVolume to 1.0 in PlayMode");
+                    Assert(Mathf.Approximately(SettingsManager.Instance.MusicVolume, 0.8f),
+                        "Reset defaults restores MusicVolume to 0.8 in PlayMode");
+                    Assert(SettingsManager.Instance.UseMouseControls == true,
+                        "Reset defaults restores UseMouseControls to true in PlayMode");
+                }
             }
 
             Button back = FindButton("BackButton");

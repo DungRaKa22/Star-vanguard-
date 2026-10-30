@@ -2,6 +2,9 @@ using System;
 using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
 using StarVanguard;
 using StarVanguard.UI;
 
@@ -81,6 +84,223 @@ namespace StarVanguard.Tests
             Assert.IsTrue(Enum.IsDefined(typeof(UIPanelId), UIPanelId.Home));
             Assert.IsTrue(Enum.IsDefined(typeof(UIPanelId), UIPanelId.Settings));
             Assert.IsTrue(Enum.IsDefined(typeof(UIPanelId), UIPanelId.Controls));
+        }
+    }
+
+    /// <summary>
+    /// Empirical stress test suite for Milestone 2 (OverheatGaugeUI uGUI & Zero-GC).
+    /// Adversarially challenges:
+    /// 1. Event subscription lifecycle (repeated enable/disable, unsubscription, no leaks).
+    /// 2. Value range and extreme boundary conditions (negative, overflow, rapid oscillation, tier thresholds).
+    /// 3. Zero-GC heap allocation during active updates in steady-state.
+    /// 4. Defensive null-safety when references are unassigned or destroyed.
+    /// 5. Secondary HUD handlers (crystals, weapon badges, division-by-zero protection).
+    /// </summary>
+    [TestFixture]
+    public class OverheatGaugeStressTests
+    {
+        private GameObject m_TestRoot;
+        private OverheatGaugeUI m_GaugeUI;
+        private Slider m_Slider;
+        private Image m_FillImage;
+        private TextMeshProUGUI m_StatusText;
+
+        [SetUp]
+        public void SetUp()
+        {
+            m_TestRoot = new GameObject("Test_OverheatGaugeRoot");
+
+            GameObject sliderObj = new GameObject("Slider", typeof(RectTransform), typeof(Slider));
+            sliderObj.transform.SetParent(m_TestRoot.transform, false);
+            m_Slider = sliderObj.GetComponent<Slider>();
+            m_Slider.minValue = 0f;
+            m_Slider.maxValue = 1f;
+
+            GameObject fillObj = new GameObject("Fill", typeof(RectTransform), typeof(Image));
+            fillObj.transform.SetParent(sliderObj.transform, false);
+            m_FillImage = fillObj.GetComponent<Image>();
+            m_Slider.fillRect = fillObj.GetComponent<RectTransform>();
+
+            GameObject textObj = new GameObject("StatusText", typeof(RectTransform), typeof(TextMeshProUGUI));
+            textObj.transform.SetParent(m_TestRoot.transform, false);
+            m_StatusText = textObj.GetComponent<TextMeshProUGUI>();
+
+            m_GaugeUI = m_TestRoot.AddComponent<OverheatGaugeUI>();
+
+            // Assign private fields via reflection
+            SetPrivateField(m_GaugeUI, "m_HeatSlider", m_Slider);
+            SetPrivateField(m_GaugeUI, "m_HeatFillImage", m_FillImage);
+            SetPrivateField(m_GaugeUI, "m_HeatStatusText", m_StatusText);
+
+            // In EditMode, lifecycle methods must be invoked explicitly
+            InvokePrivateMethod(m_GaugeUI, "OnEnable");
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            if (m_GaugeUI != null)
+            {
+                InvokePrivateMethod(m_GaugeUI, "OnDisable");
+            }
+
+            if (m_TestRoot != null)
+            {
+                UnityEngine.Object.DestroyImmediate(m_TestRoot);
+            }
+        }
+
+        private static void SetPrivateField(object target, string fieldName, object value)
+        {
+            FieldInfo field = target.GetType().GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Instance);
+            if (field != null)
+            {
+                field.SetValue(target, value);
+            }
+        }
+
+        private static object InvokePrivateMethod(object target, string methodName, params object[] args)
+        {
+            MethodInfo method = target.GetType().GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Instance);
+            return method?.Invoke(target, args);
+        }
+
+        private static void FireHeatChanged(float heat)
+        {
+            FieldInfo field = typeof(WeaponHeatController).GetField("OnHeatChanged", BindingFlags.Static | BindingFlags.NonPublic);
+            var del = (Action<float>)field?.GetValue(null);
+            del?.Invoke(heat);
+        }
+
+        private static void FireOverheated(bool overheated)
+        {
+            FieldInfo field = typeof(WeaponHeatController).GetField("OnOverheated", BindingFlags.Static | BindingFlags.NonPublic);
+            var del = (Action<bool>)field?.GetValue(null);
+            del?.Invoke(overheated);
+        }
+
+        [Test]
+        public void Stress_EventSubscription_MultipleEnableDisableCycles_NoLeaksOrDoubleSub()
+        {
+            m_GaugeUI.ResetUI();
+
+            // Run 50 rapid enable/disable cycles
+            for (int i = 0; i < 50; i++)
+            {
+                InvokePrivateMethod(m_GaugeUI, "OnDisable");
+                InvokePrivateMethod(m_GaugeUI, "OnEnable");
+            }
+
+            // Verify single subscription: fire event and check normalized heat
+            FireHeatChanged(0.42f);
+            Assert.AreEqual(0.42f, m_GaugeUI.NormalizedHeat, 0.001f, "OverheatGaugeUI must receive heat event after enable cycles");
+            Assert.AreEqual(0.42f, m_Slider.value, 0.001f, "Slider value must match heat");
+
+            // Disable and verify unsubscription
+            InvokePrivateMethod(m_GaugeUI, "OnDisable");
+            FireHeatChanged(0.88f);
+            Assert.AreEqual(0.42f, m_GaugeUI.NormalizedHeat, 0.001f, "OverheatGaugeUI must NOT update while disabled");
+
+            // Re-enable and verify resume
+            InvokePrivateMethod(m_GaugeUI, "OnEnable");
+            FireHeatChanged(0.65f);
+            Assert.AreEqual(0.65f, m_GaugeUI.NormalizedHeat, 0.001f, "OverheatGaugeUI resumes receiving events when re-enabled");
+        }
+
+        [Test]
+        public void Stress_ExtremeHeatValues_ClampingAndColorTiers()
+        {
+            // 1. Negative heat test
+            FireHeatChanged(-10.0f);
+            Assert.AreEqual(0.0f, m_GaugeUI.NormalizedHeat, 0.0001f, "Negative heat clamped to 0.0");
+            Assert.AreEqual(0.0f, m_Slider.value, 0.0001f, "Slider clamped to 0.0");
+            Assert.AreEqual(OverheatGaugeUI.GetHeatColor(0.0f), m_FillImage.color, "Cyan color at 0%");
+
+            // 2. Normal intermediate tiers
+            FireHeatChanged(0.39f);
+            Assert.AreEqual(OverheatGaugeUI.GetHeatColor(0.39f), m_FillImage.color, "Cyan tier (< 40%)");
+
+            FireHeatChanged(0.40f);
+            Assert.AreEqual(OverheatGaugeUI.GetHeatColor(0.40f), m_FillImage.color, "Amber tier (40% - 75%)");
+
+            FireHeatChanged(0.749f);
+            Assert.AreEqual(OverheatGaugeUI.GetHeatColor(0.749f), m_FillImage.color, "Amber tier (40% - 75%)");
+
+            FireHeatChanged(0.75f);
+            Assert.AreEqual(OverheatGaugeUI.GetHeatColor(0.75f), m_FillImage.color, "Red tier (>= 75%)");
+
+            // 3. Overflow heat test
+            FireHeatChanged(150.0f);
+            Assert.AreEqual(1.0f, m_GaugeUI.NormalizedHeat, 0.0001f, "Excess heat clamped to 1.0");
+            Assert.AreEqual(1.0f, m_Slider.value, 0.0001f, "Slider clamped to 1.0");
+            Assert.AreEqual(OverheatGaugeUI.GetHeatColor(1.0f), m_FillImage.color, "Red color at 100%");
+        }
+
+        [Test]
+        public void Stress_RapidOscillation_1000Cycles()
+        {
+            for (int i = 0; i < 1000; i++)
+            {
+                float heat = (i % 2 == 0) ? 0.0f : 1.0f;
+                bool overheated = (i % 2 != 0);
+
+                FireHeatChanged(heat);
+                FireOverheated(overheated);
+            }
+
+            // Final state after odd iteration (999) is overheated at 1.0
+            Assert.AreEqual(1.0f, m_GaugeUI.NormalizedHeat, 0.001f);
+            Assert.IsTrue(m_GaugeUI.IsOverheated);
+        }
+
+        [Test]
+        public void Stress_DefensiveNullSafety_AllMethodsSurviveMissingReferences()
+        {
+            GameObject nakedObj = new GameObject("Naked_OverheatGauge");
+            OverheatGaugeUI nakedUI = nakedObj.AddComponent<OverheatGaugeUI>();
+
+            Assert.DoesNotThrow(() => FireHeatChanged(0.5f));
+            Assert.DoesNotThrow(() => FireOverheated(true));
+            Assert.DoesNotThrow(() => FireOverheated(false));
+            Assert.DoesNotThrow(() => nakedUI.ResetUI());
+            Assert.DoesNotThrow(() => InvokePrivateMethod(nakedUI, "HandleCrystalChargeChanged", 0, 0));
+            Assert.DoesNotThrow(() => InvokePrivateMethod(nakedUI, "HandleCrystalChargeChanged", -10, -5));
+            Assert.DoesNotThrow(() => InvokePrivateMethod(nakedUI, "HandleWeaponChanged", (eWeaponType)99, 99));
+            Assert.DoesNotThrow(() => InvokePrivateMethod(nakedUI, "HandleWeaponChanged", (eWeaponType)(-1), -1));
+
+            UnityEngine.Object.DestroyImmediate(nakedObj);
+        }
+
+        [Test]
+        public void Stress_ZeroGC_HandleHeatChanged_SteadyState()
+        {
+            FieldInfo field = typeof(WeaponHeatController).GetField("OnHeatChanged", BindingFlags.Static | BindingFlags.NonPublic);
+            var del = (Action<float>)field?.GetValue(null);
+            Assert.IsNotNull(del, "OnHeatChanged delegate must have at least one subscriber (m_GaugeUI)");
+
+            // Warm up JIT and TMP caches
+            for (int i = 0; i < 20; i++)
+            {
+                del(0.5f);
+            }
+
+            System.GC.Collect();
+            System.GC.WaitForPendingFinalizers();
+            System.GC.Collect();
+
+            long allocBefore = System.GC.GetAllocatedBytesForCurrentThread();
+
+            for (int i = 0; i < 1000; i++)
+            {
+                float heat = (i % 2 == 0) ? 0.50f : 0.51f;
+                del(heat);
+            }
+
+            long allocAfter = System.GC.GetAllocatedBytesForCurrentThread();
+            long totalAllocated = allocAfter - allocBefore;
+
+            Assert.AreEqual(0, totalAllocated,
+                $"HandleHeatChanged must produce ZERO GC allocations in steady state. Observed: {totalAllocated} bytes over 1000 invocations.");
         }
     }
 }

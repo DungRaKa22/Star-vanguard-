@@ -1,299 +1,305 @@
+using System;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 
-/// <summary>
-/// Futuristic Sci-Fi HUD Component for Weapon Overheat, Firing Rhythm, and Energy Crystal Bomb Manufacturing.
-/// - Locked strictly to 1920x1080 Full HD Viewport.
-/// - Renders a dynamic firing rhythm cadence pulse on each shot.
-/// - Displays continuous heat gauge with 3-tier color shifting (Cyan -> Amber -> Danger Red).
-/// - Flashes warning alert with cooldown timer when weapon is overheated/jammed.
-/// - Tracks 50-Crystal manufacturing progress towards +1 Plasma Bomb.
-/// </summary>
-public class OverheatGaugeUI : MonoBehaviour
+namespace StarVanguard.UI
 {
-    [Header("Optional Canvas UI Bindings")]
-    [SerializeField] private Slider m_HeatSlider;
-    [SerializeField] private Image m_HeatFillImage;
-    [SerializeField] private TextMeshProUGUI m_HeatStatusText;
-
-    [Header("Procedural HUD Display")]
-    [SerializeField] private bool m_EnableProceduralHUD = true;
-
-    private float m_NormalizedHeat = 0f;
-    private bool m_IsOverheated = false;
-    private float m_OverheatCooldownTimer = 0f;
-    private const float k_OverheatDuration = 2.85f;
-
-    private int m_CurrentCrystals = 0;
-    private int m_MaxCrystals = 50;
-    private string m_WeaponName = "RED LASER";
-    private int m_WeaponLevel = 1;
-
-    // Firing rhythm pulse animation
-    private float m_RhythmPulse = 0f;
-
-    // Zero-alloc GUI textures
-    private Texture2D m_BgTex;
-    private Texture2D m_BorderTex;
-    private Texture2D m_CyanTex;
-    private Texture2D m_YellowTex;
-    private Texture2D m_RedTex;
-    private Texture2D m_EmeraldTex;
-    private GUIStyle m_LabelStyle;
-    private GUIStyle m_WarningStyle;
-    private GUIStyle m_WeaponBadgeStyle;
-    private bool m_StylesInitialized = false;
-
-    private void Awake()
+    /// <summary>
+    /// Pure uGUI Sci-Fi Overheat Gauge HUD for Star Vanguard.
+    /// Replaces legacy IMGUI OnGUI implementation with zero-allocation uGUI architecture:
+    /// - Serialized uGUI Slider, fill Image, and TextMeshProUGUI status text.
+    /// - Static event subscription to WeaponHeatController.OnHeatChanged and WeaponHeatController.OnOverheated.
+    /// - Zero-GC gameplay: TMP_Text.SetText overloads, cached color structs, pre-cached weapon strings.
+    /// - Zero Find* / Camera.main / GetComponent calls in runtime hot paths.
+    /// </summary>
+    [DisallowMultipleComponent]
+    public class OverheatGaugeUI : MonoBehaviour
     {
-        createTextures();
-    }
+        [Header("uGUI Core Bindings")]
+        [SerializeField] private Slider m_HeatSlider;
+        [SerializeField] private Image m_HeatFillImage;
+        [SerializeField] private TextMeshProUGUI m_HeatStatusText;
 
-    private void OnEnable()
-    {
-        WeaponHeatController.OnAnyHeatChanged += HandleHeatChanged;
-        WeaponHeatController.OnAnyOverheatStateChanged += HandleOverheatStateChanged;
-        PlayerStats.OnCrystalChargeChanged += HandleCrystalChargeChanged;
-        PlayerShooting.OnWeaponChanged += HandleWeaponChanged;
-        PlayerShooting.OnShotFiredRhythm += HandleShotFiredRhythm;
-    }
+        [Header("Optional Secondary Bindings")]
+        [SerializeField] private Slider m_CrystalSlider;
+        [SerializeField] private TextMeshProUGUI m_CrystalText;
+        [SerializeField] private TextMeshProUGUI m_WeaponText;
 
-    private void OnDisable()
-    {
-        WeaponHeatController.OnAnyHeatChanged -= HandleHeatChanged;
-        WeaponHeatController.OnAnyOverheatStateChanged -= HandleOverheatStateChanged;
-        PlayerStats.OnCrystalChargeChanged -= HandleCrystalChargeChanged;
-        PlayerShooting.OnWeaponChanged -= HandleWeaponChanged;
-        PlayerShooting.OnShotFiredRhythm -= HandleShotFiredRhythm;
-    }
+        // Static cached colors (Zero allocation struct copies)
+        private static readonly Color k_ColorCyan = new Color(0.0f, 0.95f, 1.0f, 1.0f);     // Heat < 40% (Neon Cyan)
+        private static readonly Color k_ColorAmber = new Color(1.0f, 0.82f, 0.0f, 1.0f);    // Heat 40% - 75% (Amber Yellow)
+        private static readonly Color k_ColorRed = new Color(1.0f, 0.15f, 0.2f, 1.0f);      // Heat >= 75% (Alert Red)
 
-    private void Update()
-    {
-        // Smoothly decay firing rhythm pulse
-        if (m_RhythmPulse > 0f)
+        // Zero-GC string constants for TextMeshProUGUI.SetText
+        private const string k_HeatFormat = "HEAT: {0:0}%";
+        private const string k_OverheatedFormat = "OVERHEATED [{0:0}%]";
+        private const string k_OverheatedText = "OVERHEATED";
+        private const string k_OptimalText = "OPTIMAL";
+        private const string k_CrystalFormat = "CRYSTALS: {0:0}/{1:0}";
+
+        // Pre-cached weapon label matrix (5 weapons x 8 levels) for zero-allocation weapon updates
+        private static readonly string[,] s_WeaponLabels;
+
+        // Runtime state
+        private float m_NormalizedHeat = 0f;
+        private bool m_IsOverheated = false;
+        private bool m_IsSubscribed = false;
+
+        // Public properties for testing, verification, and inspection
+        public float NormalizedHeat => m_NormalizedHeat;
+        public bool IsOverheated => m_IsOverheated;
+        public Slider HeatSlider => m_HeatSlider;
+        public Image HeatFillImage => m_HeatFillImage;
+        public TextMeshProUGUI HeatStatusText => m_HeatStatusText;
+        public Slider CrystalSlider => m_CrystalSlider;
+        public TextMeshProUGUI CrystalText => m_CrystalText;
+        public TextMeshProUGUI WeaponText => m_WeaponText;
+
+        static OverheatGaugeUI()
         {
-            m_RhythmPulse = Mathf.MoveTowards(m_RhythmPulse, 0f, Time.deltaTime * 5f);
+            string[] weaponNames = new string[]
+            {
+                "RED LASER",
+                "GREEN NEUTRON",
+                "YELLOW VULCAN",
+                "PURPLE PLASMA",
+                "LASER CANNON"
+            };
+
+            s_WeaponLabels = new string[5, 8];
+            for (int w = 0; w < 5; w++)
+            {
+                for (int lvl = 0; lvl < 8; lvl++)
+                {
+                    s_WeaponLabels[w, lvl] = $"{weaponNames[w]} [LV.{lvl + 1}]";
+                }
+            }
         }
 
-        // Count down overheat penalty
-        if (m_IsOverheated && m_OverheatCooldownTimer > 0f)
+        private void Awake()
         {
-            m_OverheatCooldownTimer = Mathf.Max(0f, m_OverheatCooldownTimer - Time.deltaTime);
-        }
-    }
+            // Defensive runtime binding fallback if fields were not assigned in Inspector/Prefab
+            if (m_HeatSlider == null)
+            {
+                m_HeatSlider = GetComponentInChildren<Slider>(true);
+            }
 
-    private void HandleShotFiredRhythm()
-    {
-        m_RhythmPulse = 1.0f;
-    }
+            if (m_HeatFillImage == null && m_HeatSlider != null && m_HeatSlider.fillRect != null)
+            {
+                m_HeatFillImage = m_HeatSlider.fillRect.GetComponent<Image>();
+            }
 
-    private void HandleWeaponChanged(eWeaponType weapon, int level)
-    {
-        m_WeaponName = weapon switch
-        {
-            eWeaponType.RedLaser => "RED LASER",
-            eWeaponType.GreenNeutron => "GREEN NEUTRON",
-            eWeaponType.YellowVulcan => "YELLOW VULCAN",
-            eWeaponType.PurplePlasma => "PURPLE PLASMA",
-            eWeaponType.LaserCannon => "LASER CANNON",
-            _ => "RED LASER"
-        };
-        m_WeaponLevel = level;
-    }
-
-    private void HandleHeatChanged(float heat)
-    {
-        m_NormalizedHeat = heat;
-        if (m_HeatSlider != null) m_HeatSlider.value = heat;
-        if (m_HeatFillImage != null)
-        {
-            m_HeatFillImage.fillAmount = heat;
-            m_HeatFillImage.color = GetHeatColor(heat);
-        }
-    }
-
-    private void HandleOverheatStateChanged(bool isOverheated)
-    {
-        m_IsOverheated = isOverheated;
-        if (isOverheated)
-        {
-            m_OverheatCooldownTimer = k_OverheatDuration;
-            AudioManager.Instance?.Play(eSFXId.PlasmaImpact, 0.9f, 0.5f);
-        }
-    }
-
-    private void HandleCrystalChargeChanged(int current, int max)
-    {
-        m_CurrentCrystals = current;
-        m_MaxCrystals = max;
-    }
-
-    public Color GetHeatColor(float heat)
-    {
-        if (heat < 0.40f) return new Color(0.0f, 0.95f, 1.0f); // Neon Cyan
-        if (heat < 0.75f) return new Color(1.0f, 0.82f, 0.0f); // Amber Yellow
-        return new Color(1.0f, 0.15f, 0.2f);                   // Danger Red
-    }
-
-    private void createTextures()
-    {
-        m_BgTex = makeColorTexture(new Color(0.04f, 0.08f, 0.16f, 0.92f));
-        m_BorderTex = makeColorTexture(new Color(0.12f, 0.35f, 0.55f, 0.95f));
-        m_CyanTex = makeColorTexture(new Color(0.0f, 0.95f, 1.0f, 0.95f));
-        m_YellowTex = makeColorTexture(new Color(1.0f, 0.85f, 0.1f, 0.95f));
-        m_RedTex = makeColorTexture(new Color(1.0f, 0.2f, 0.2f, 0.95f));
-        m_EmeraldTex = makeColorTexture(new Color(0.1f, 1.0f, 0.5f, 0.95f));
-    }
-
-    private Texture2D makeColorTexture(Color col)
-    {
-        Texture2D tex = new Texture2D(1, 1);
-        tex.SetPixel(0, 0, col);
-        tex.Apply();
-        return tex;
-    }
-
-    private void OnDestroy()
-    {
-        if (m_BgTex) Destroy(m_BgTex);
-        if (m_BorderTex) Destroy(m_BorderTex);
-        if (m_CyanTex) Destroy(m_CyanTex);
-        if (m_YellowTex) Destroy(m_YellowTex);
-        if (m_RedTex) Destroy(m_RedTex);
-        if (m_EmeraldTex) Destroy(m_EmeraldTex);
-    }
-
-    private void initStyles()
-    {
-        if (m_StylesInitialized) return;
-
-        float uiScale = Screen.height / 1080f;
-
-        m_LabelStyle = new GUIStyle(GUI.skin.label)
-        {
-            alignment = TextAnchor.MiddleCenter,
-            fontSize = Mathf.Clamp(Mathf.RoundToInt(12f * uiScale), 10, 16),
-            fontStyle = FontStyle.Bold
-        };
-        m_LabelStyle.normal.textColor = new Color(0.85f, 0.95f, 1.0f);
-
-        m_WarningStyle = new GUIStyle(GUI.skin.label)
-        {
-            alignment = TextAnchor.MiddleCenter,
-            fontSize = Mathf.Clamp(Mathf.RoundToInt(13f * uiScale), 11, 18),
-            fontStyle = FontStyle.Bold
-        };
-        m_WarningStyle.normal.textColor = new Color(1.0f, 0.25f, 0.25f);
-
-        m_WeaponBadgeStyle = new GUIStyle(GUI.skin.label)
-        {
-            alignment = TextAnchor.MiddleCenter,
-            fontSize = Mathf.Clamp(Mathf.RoundToInt(11f * uiScale), 9, 15),
-            fontStyle = FontStyle.Bold
-        };
-        m_WeaponBadgeStyle.normal.textColor = new Color(0.3f, 1.0f, 0.8f);
-
-        m_StylesInitialized = true;
-    }
-
-    private void OnGUI()
-    {
-        if (!m_EnableProceduralHUD) return;
-        if (GameManager.Instance == null || GameManager.Instance.GameState != eGameState.Playing) return;
-
-        initStyles();
-
-        // 1080p Reference bounds calculated strictly inside camera rect
-        Camera cam = Camera.main;
-        Rect camPixelRect = cam != null ? cam.pixelRect : new Rect(0, 0, Screen.width, Screen.height);
-
-        float uiScale = camPixelRect.height / 1080f;
-        float barWidth = 380f * uiScale;
-        float heatBarHeight = 14f * uiScale;
-        float crystalBarHeight = 8f * uiScale;
-
-        // Apply firing rhythm micro-pulse expansion
-        float pulseExpand = m_RhythmPulse * 6f * uiScale;
-        float finalBarWidth = barWidth + pulseExpand;
-
-        float centerX = camPixelRect.x + (camPixelRect.width * 0.5f);
-        float bottomY = camPixelRect.y + 60f * uiScale; // Positioned cleanly at lower screen margin
-
-        // 0. TOP HUD STATUS BARS (Top-Left Score, Top-Right Lives & Bombs)
-        int score = GameManager.Instance != null ? GameManager.Instance.CurrentScore : 0;
-        int lives = GameManager.Instance != null ? GameManager.Instance.CurrentLives : 3;
-        var playerStats = FindAnyObjectByType<PlayerStats>();
-        int bombs = playerStats != null ? playerStats.BombCount : 0;
-
-        float topMarginY = camPixelRect.y + (20f * uiScale);
-
-        // Top-Left Score Badge
-        Rect scoreRect = new Rect(camPixelRect.x + (25f * uiScale), topMarginY, 220f * uiScale, 36f * uiScale);
-        GUI.DrawTexture(scoreRect, m_BgTex);
-        GUI.Label(scoreRect, $"⭐ SCORE: {score:D6}", m_LabelStyle);
-
-        // Top-Right Lives and Bombs Badge
-        float statsWidth = 260f * uiScale;
-        Rect statsRect = new Rect(camPixelRect.x + camPixelRect.width - statsWidth - (25f * uiScale), topMarginY, statsWidth, 36f * uiScale);
-        GUI.DrawTexture(statsRect, m_BgTex);
-        GUI.Label(statsRect, $"❤️ HULL: {lives}   |   💣 BOMBS: {bombs}", m_LabelStyle);
-
-        // 1. OVERHEAT HEAT GAUGE (Bottom center)
-        float heatBarX = centerX - (finalBarWidth * 0.5f);
-        float heatBarY = Screen.height - bottomY;
-
-        // Background box with border
-        Rect heatOuterRect = new Rect(heatBarX - 2, heatBarY - 2, finalBarWidth + 4, heatBarHeight + 4);
-        GUI.DrawTexture(heatOuterRect, m_BorderTex);
-
-        Rect heatBgRect = new Rect(heatBarX, heatBarY, finalBarWidth, heatBarHeight);
-        GUI.DrawTexture(heatBgRect, m_BgTex);
-
-        // Heat fill
-        float fillWidth = finalBarWidth * Mathf.Clamp01(m_NormalizedHeat);
-        if (fillWidth > 1f)
-        {
-            Texture2D fillTex = m_NormalizedHeat < 0.40f ? m_CyanTex : (m_NormalizedHeat < 0.75f ? m_YellowTex : m_RedTex);
-            GUI.DrawTexture(new Rect(heatBarX, heatBarY, fillWidth, heatBarHeight), fillTex);
+            if (m_HeatStatusText == null)
+            {
+                m_HeatStatusText = GetComponentInChildren<TextMeshProUGUI>(true);
+            }
         }
 
-        // Overheat status banner
-        string heatText;
-        if (m_IsOverheated)
+        private void OnEnable()
         {
-            bool blink = (Time.unscaledTime * 5f % 1f) > 0.5f;
-            heatText = blink ? $"⚠️ WEAPON OVERHEATED - COOLING [{m_OverheatCooldownTimer:F1}s]" : "⚠️ OVERHEATED ⚠️";
-        }
-        else
-        {
-            heatText = $"HEAT LEVEL  [{Mathf.RoundToInt(m_NormalizedHeat * 100)}%]";
-        }
+            SubscribeEvents();
 
-        GUIStyle statusStyle = m_IsOverheated ? m_WarningStyle : m_LabelStyle;
-        GUI.Label(new Rect(centerX - (200f * uiScale), heatBarY - (22f * uiScale), 400f * uiScale, 20f * uiScale), heatText, statusStyle);
-
-        // 2. CRYSTAL ENERGY BOMB ACCUMULATOR BAR (Just above overheat bar)
-        float crystalBarY = heatBarY - (crystalBarHeight + 26f * uiScale);
-        float crystalBarX = centerX - (barWidth * 0.5f);
-
-        Rect crystalOuterRect = new Rect(crystalBarX - 1, crystalBarY - 1, barWidth + 2, crystalBarHeight + 2);
-        GUI.DrawTexture(crystalOuterRect, m_BorderTex);
-
-        Rect crystalBgRect = new Rect(crystalBarX, crystalBarY, barWidth, crystalBarHeight);
-        GUI.DrawTexture(crystalBgRect, m_BgTex);
-
-        float crystalFill = barWidth * Mathf.Clamp01((float)m_CurrentCrystals / Mathf.Max(1, m_MaxCrystals));
-        if (crystalFill > 1f)
-        {
-            GUI.DrawTexture(new Rect(crystalBarX, crystalBarY, crystalFill, crystalBarHeight), m_EmeraldTex);
+            // Synchronize with existing runtime state if weapon controller is already active
+            if (WeaponHeatController.Instance != null)
+            {
+                HandleHeatChanged(WeaponHeatController.Instance.CurrentHeat);
+                HandleOverheated(WeaponHeatController.Instance.IsOverheated);
+            }
+            else
+            {
+                ResetUI();
+            }
         }
 
-        string crystalText = $"CRYSTAL ENERGY  [{m_CurrentCrystals} / {m_MaxCrystals}]  ->  +1 PLASMA BOMB";
-        GUI.Label(new Rect(centerX - (220f * uiScale), crystalBarY - (18f * uiScale), 440f * uiScale, 18f * uiScale), crystalText, m_LabelStyle);
+        private void OnDisable()
+        {
+            UnsubscribeEvents();
+        }
 
-        // 3. WEAPON IDENTIFIER BADGE (Below overheat bar)
-        string weaponBadge = $"⚡ {m_WeaponName}  [LV.{m_WeaponLevel}]  •  KEYS 1-5";
-        GUI.Label(new Rect(centerX - (200f * uiScale), heatBarY + heatBarHeight + (4f * uiScale), 400f * uiScale, 20f * uiScale), weaponBadge, m_WeaponBadgeStyle);
+        private void OnDestroy()
+        {
+            UnsubscribeEvents();
+        }
+
+        private void SubscribeEvents()
+        {
+            if (m_IsSubscribed) return;
+
+            WeaponHeatController.OnHeatChanged += HandleHeatChanged;
+            WeaponHeatController.OnOverheated += HandleOverheated;
+            PlayerStats.OnCrystalChargeChanged += HandleCrystalChargeChanged;
+            PlayerShooting.OnWeaponChanged += HandleWeaponChanged;
+
+            m_IsSubscribed = true;
+        }
+
+        private void UnsubscribeEvents()
+        {
+            if (!m_IsSubscribed) return;
+
+            WeaponHeatController.OnHeatChanged -= HandleHeatChanged;
+            WeaponHeatController.OnOverheated -= HandleOverheated;
+            PlayerStats.OnCrystalChargeChanged -= HandleCrystalChargeChanged;
+            PlayerShooting.OnWeaponChanged -= HandleWeaponChanged;
+
+            m_IsSubscribed = false;
+        }
+
+        /// <summary>
+        /// Handles weapon heat change event.
+        /// Zero GC allocation guaranteed: uses TMP_Text.SetText formatting and cached color structs.
+        /// </summary>
+        /// <param name="i_Heat">Normalized heat in range [0..1]</param>
+        private void HandleHeatChanged(float i_Heat)
+        {
+            m_NormalizedHeat = Mathf.Clamp01(i_Heat);
+
+            if (m_HeatSlider != null)
+            {
+                m_HeatSlider.value = m_NormalizedHeat;
+            }
+
+            if (m_HeatFillImage != null)
+            {
+                m_HeatFillImage.color = GetHeatColor(m_NormalizedHeat);
+            }
+
+            if (m_HeatStatusText != null)
+            {
+                if (m_IsOverheated)
+                {
+                    m_HeatStatusText.color = k_ColorRed;
+                    m_HeatStatusText.SetText(k_OverheatedFormat, Mathf.RoundToInt(m_NormalizedHeat * 100f));
+                }
+                else
+                {
+                    m_HeatStatusText.color = GetHeatColor(m_NormalizedHeat);
+                    if (m_NormalizedHeat <= 0.001f)
+                    {
+                        m_HeatStatusText.SetText(k_OptimalText);
+                    }
+                    else
+                    {
+                        m_HeatStatusText.SetText(k_HeatFormat, Mathf.RoundToInt(m_NormalizedHeat * 100f));
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Handles weapon overheat / jam state transition.
+        /// </summary>
+        /// <param name="i_IsOverheated">True when jammed, false when cooled</param>
+        private void HandleOverheated(bool i_IsOverheated)
+        {
+            m_IsOverheated = i_IsOverheated;
+
+            if (i_IsOverheated)
+            {
+                if (m_HeatFillImage != null)
+                {
+                    m_HeatFillImage.color = k_ColorRed;
+                }
+
+                if (m_HeatStatusText != null)
+                {
+                    m_HeatStatusText.color = k_ColorRed;
+                    m_HeatStatusText.SetText(k_OverheatedText);
+                }
+
+                if (AudioManager.Instance != null)
+                {
+                    AudioManager.Instance.Play(eSFXId.PlasmaImpact, 0.9f, 0.5f);
+                }
+            }
+            else
+            {
+                if (m_HeatStatusText != null)
+                {
+                    m_HeatStatusText.color = GetHeatColor(m_NormalizedHeat);
+                    if (m_NormalizedHeat <= 0.001f)
+                    {
+                        m_HeatStatusText.SetText(k_OptimalText);
+                    }
+                    else
+                    {
+                        m_HeatStatusText.SetText(k_HeatFormat, Mathf.RoundToInt(m_NormalizedHeat * 100f));
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Optional handler for crystal accumulator HUD.
+        /// </summary>
+        private void HandleCrystalChargeChanged(int i_Current, int i_Max)
+        {
+            if (m_CrystalSlider != null)
+            {
+                m_CrystalSlider.maxValue = Mathf.Max(1, i_Max);
+                m_CrystalSlider.value = Mathf.Clamp(i_Current, 0, i_Max);
+            }
+
+            if (m_CrystalText != null)
+            {
+                m_CrystalText.SetText(k_CrystalFormat, i_Current, i_Max);
+            }
+        }
+
+        /// <summary>
+        /// Optional handler for active weapon badge HUD.
+        /// </summary>
+        private void HandleWeaponChanged(eWeaponType i_Weapon, int i_Level)
+        {
+            if (m_WeaponText == null) return;
+
+            int weaponIdx = (int)i_Weapon;
+            if (weaponIdx < 0 || weaponIdx >= 5) weaponIdx = 0;
+
+            int levelIdx = Mathf.Clamp(i_Level - 1, 0, 7);
+            m_WeaponText.SetText(s_WeaponLabels[weaponIdx, levelIdx]);
+        }
+
+        /// <summary>
+        /// Resets the UI elements to their baseline zero-heat optimal state.
+        /// </summary>
+        public void ResetUI()
+        {
+            m_NormalizedHeat = 0f;
+            m_IsOverheated = false;
+
+            if (m_HeatSlider != null)
+            {
+                m_HeatSlider.value = 0f;
+            }
+
+            if (m_HeatFillImage != null)
+            {
+                m_HeatFillImage.color = k_ColorCyan;
+            }
+
+            if (m_HeatStatusText != null)
+            {
+                m_HeatStatusText.color = k_ColorCyan;
+                m_HeatStatusText.SetText(k_OptimalText);
+            }
+        }
+
+        /// <summary>
+        /// Returns cached 3-tier color based on normalized heat level.
+        /// Tier 1: Cyan (&lt; 40%)
+        /// Tier 2: Amber Yellow (40% - 75%)
+        /// Tier 3: Danger Red (&gt;= 75%)
+        /// </summary>
+        public static Color GetHeatColor(float i_Heat)
+        {
+            if (i_Heat < 0.40f) return k_ColorCyan;
+            if (i_Heat < 0.75f) return k_ColorAmber;
+            return k_ColorRed;
+        }
+
+        // Instance overload for backward compatibility
+        public Color GetColorForHeat(float i_Heat) => GetHeatColor(i_Heat);
     }
 }

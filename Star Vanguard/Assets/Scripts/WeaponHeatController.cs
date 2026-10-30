@@ -8,15 +8,51 @@ using UnityEngine;
 public class WeaponHeatController : MonoBehaviour
 {
     public static WeaponHeatController Instance { get; private set; }
-    public static event Action<float> OnAnyHeatChanged;
-    public static event Action<bool> OnAnyOverheatStateChanged;
 
-    public event Action<float> OnHeatChanged;              // normalized [0..1]
-    public event Action<bool> OnOverheatStateChanged;      // true when locked
+    /// <summary>
+    /// Static event fired whenever weapon heat changes (normalized [0..1]).
+    /// </summary>
+    public static event Action<float> OnHeatChanged;
+
+    /// <summary>
+    /// Static event fired whenever weapon overheat state changes (true when jammed/overheated).
+    /// </summary>
+    public static event Action<bool> OnOverheated;
+
+    #region Backwards Compatibility Obsolete Wrappers
+    [Obsolete("Use OnHeatChanged instead")]
+    public static event Action<float> OnAnyHeatChanged
+    {
+        add => OnHeatChanged += value;
+        remove => OnHeatChanged -= value;
+    }
+
+    [Obsolete("Use OnOverheated instead")]
+    public static event Action<bool> OnAnyOverheatStateChanged
+    {
+        add => OnOverheated += value;
+        remove => OnOverheated -= value;
+    }
+
+    [Obsolete("Use static OnOverheated instead")]
+    public event Action<bool> OnOverheatStateChanged
+    {
+        add => OnOverheated += value;
+        remove => OnOverheated -= value;
+    }
+    #endregion
 
     private void Awake()
     {
         Instance = this;
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+        {
+            Instance = null;
+        }
     }
 
     [Header("Heat Settings")]
@@ -40,15 +76,13 @@ public class WeaponHeatController : MonoBehaviour
             float coolingAmount = m_CoolingRate * Time.deltaTime;
             m_CurrentHeat = Mathf.Max(0f, m_CurrentHeat - coolingAmount);
             OnHeatChanged?.Invoke(m_CurrentHeat);
-            OnAnyHeatChanged?.Invoke(m_CurrentHeat);
 
             // If overheated, recover once completely cooled down
             if (m_IsOverheated && m_CurrentHeat <= 0.001f)
             {
                 m_CurrentHeat = 0f;
                 m_IsOverheated = false;
-                OnOverheatStateChanged?.Invoke(false);
-                OnAnyOverheatStateChanged?.Invoke(false);
+                OnOverheated?.Invoke(false);
             }
         }
     }
@@ -69,14 +103,12 @@ public class WeaponHeatController : MonoBehaviour
         m_CurrentHeat = Mathf.Min(1.0f, m_CurrentHeat + heatAdded);
         m_LastShotTime = Time.time;
         OnHeatChanged?.Invoke(m_CurrentHeat);
-        OnAnyHeatChanged?.Invoke(m_CurrentHeat);
 
         // Check if this shot triggered an overheat
         if (m_CurrentHeat >= 1.0f)
         {
             m_IsOverheated = true;
-            OnOverheatStateChanged?.Invoke(true);
-            OnAnyOverheatStateChanged?.Invoke(true);
+            OnOverheated?.Invoke(true);
         }
 
         return true;
@@ -90,8 +122,6 @@ public class WeaponHeatController : MonoBehaviour
         m_CurrentHeat = 0f;
         m_IsOverheated = false;
         OnHeatChanged?.Invoke(0f);
-        OnAnyHeatChanged?.Invoke(0f);
-        OnOverheatStateChanged?.Invoke(false);
-        OnAnyOverheatStateChanged?.Invoke(false);
+        OnOverheated?.Invoke(false);
     }
 }
