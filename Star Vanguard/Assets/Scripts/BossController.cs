@@ -169,6 +169,8 @@ public class BossController : MonoBehaviour, IDamageable
     /// <summary>
     /// Scales boss health for Co-op Multiplayer according to REA extracted formula:
     /// HP_coop(N) = HP_base * (1 + 0.65 * (N - 1))
+    /// Dormant hook: the single-player build (ADR-001) always runs with N = 1, so nothing calls
+    /// this today. Keep it as the extension point for the future co-op pass (backlog T-203).
     /// </summary>
     public void ScaleForCoop(int playerCount)
     {

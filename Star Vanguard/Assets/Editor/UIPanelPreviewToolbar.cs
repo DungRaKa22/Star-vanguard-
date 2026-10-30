@@ -15,7 +15,6 @@ namespace StarVanguard.Editor
             "MenuRoot",
             "SettingsPanel",
             "ControlsPanel",
-            "CoopPanel",
             "LeaderboardPanel",
             "PausePanel",
             "GameOverPanel",
@@ -45,10 +44,8 @@ namespace StarVanguard.Editor
         [MenuItem("Star Vanguard/UI/Preview Panel/3. Controls (Huong Dan) #&3")]
         public static void ShowControls() => SwitchToPanel("ControlsPanel");
 
-        [MenuItem("Star Vanguard/UI/Preview Panel/4. Co-op (Choi Mang) #&4")]
-        public static void ShowCoop() => SwitchToPanel("CoopPanel");
-
-        [MenuItem("Star Vanguard/UI/Preview Panel/5. Reset To Boot State #&0")]
+        // The Co-op panel was deleted in ADR-001 (docs/ADR-001-coop.md); its preview entry is gone too.
+        [MenuItem("Star Vanguard/UI/Preview Panel/4. Reset To Boot State #&0")]
         public static void ResetToBootState()
         {
             SwitchToPanel("MenuRoot");
@@ -123,9 +120,6 @@ namespace StarVanguard.Editor
             EditorGUILayout.BeginHorizontal();
             GUI.backgroundColor = currentVisible == "ControlsPanel" ? new Color(1f, 0.8f, 0.2f) : Color.white;
             if (GUILayout.Button("📖 Hướng Dẫn (Controls)", GUILayout.Height(30))) SwitchToPanel("ControlsPanel");
-
-            GUI.backgroundColor = currentVisible == "CoopPanel" ? new Color(0.9f, 0.4f, 1f) : Color.white;
-            if (GUILayout.Button("👥 Chơi Mạng (Co-op)", GUILayout.Height(30))) SwitchToPanel("CoopPanel");
             EditorGUILayout.EndHorizontal();
 
             GUI.backgroundColor = Color.white;

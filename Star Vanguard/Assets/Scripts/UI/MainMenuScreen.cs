@@ -23,7 +23,6 @@ namespace StarVanguard.UI
 
         private Canvas m_Canvas;
         private GameObject m_Root;
-        private GameObject m_CoopPanel;
         private GameObject m_ControlsPanel;
         private TextMeshProUGUI m_BestScoreValue;
         private readonly List<Button> m_DifficultyButtons = new List<Button>(3);
@@ -42,11 +41,11 @@ namespace StarVanguard.UI
 
         private void Update()
         {
-            // Esc closes the co-op sheet; nothing else in the menu listens for keys yet.
+            // Esc closes an open sub-panel; nothing else in the menu listens for keys yet.
             if (Input.GetKeyDown(KeyCode.Escape) && UIPanelRouter.Instance != null)
             {
                 UIPanelRouter router = UIPanelRouter.Instance;
-                if (router.Current == UIPanelId.Coop || router.Current == UIPanelId.Settings || router.Current == UIPanelId.Controls)
+                if (router.Current == UIPanelId.Settings || router.Current == UIPanelId.Controls)
                 {
                     router.Back();
                 }
@@ -85,17 +84,9 @@ namespace StarVanguard.UI
             }
             router.Register(UIPanelId.Home, m_Root);
 
-            Transform existingCoop = m_Canvas.transform.Find("CoopPanel");
-            if (existingCoop != null)
-            {
-                m_CoopPanel = existingCoop.gameObject;
-                BindCoopPanel(m_CoopPanel);
-            }
-            else
-            {
-                m_CoopPanel = BuildCoopPanel();
-            }
-            router.Register(UIPanelId.Coop, m_CoopPanel);
+            // Co-op was removed in ADR-001 (docs/ADR-001-coop.md): the LAN/Mirror layer never
+            // compiled, so the menu must not offer it. Remove leftovers from older scenes.
+            RemoveLegacyCoopObjects();
 
             // Built from InputMap: the legacy scene panel was larger than the screen and
             // covered its own buttons with a raycast backdrop.
@@ -147,22 +138,19 @@ namespace StarVanguard.UI
             Transform existingRoot = m_Canvas.transform.Find("MenuRoot");
             if (existingRoot != null) DestroyImmediate(existingRoot.gameObject);
 
-            Transform existingCoop = m_Canvas.transform.Find("CoopPanel");
-            if (existingCoop != null) DestroyImmediate(existingCoop.gameObject);
-
             Transform existingControls = m_Canvas.transform.Find("ControlsPanel");
             if (existingControls != null) DestroyImmediate(existingControls.gameObject);
 
             Transform existingSettings = m_Canvas.transform.Find("SettingsPanel");
             if (existingSettings != null) DestroyImmediate(existingSettings.gameObject);
 
+            RemoveLegacyCoopObjects();
+
             m_Root = BuildHome();
-            m_CoopPanel = BuildCoopPanel();
             m_ControlsPanel = ControlsScreen.Build(m_Canvas.transform);
             GameObject settingsPanel = SettingsScreen.Build(m_Canvas.transform);
 
             m_Root.SetActive(true);
-            m_CoopPanel.SetActive(false);
             m_ControlsPanel.SetActive(false);
             settingsPanel.SetActive(false);
 
@@ -170,13 +158,16 @@ namespace StarVanguard.UI
             UnityEditor.EditorUtility.SetDirty(m_Canvas.gameObject);
             UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(gameObject.scene);
 
-            Debug.Log("MainMenuScreen: Successfully baked MenuRoot, CoopPanel, ControlsPanel, and SettingsPanel into Scene!");
+            Debug.Log("MainMenuScreen: Successfully baked MenuRoot, ControlsPanel, and SettingsPanel into Scene!");
         }
 #endif
 
         // ------------------------------------------------------------ stale cleanup
 
-        private static readonly string[] k_BuiltNames = { "MenuRoot", "CoopPanel", "ControlsPanel", "SettingsPanel" };
+        private static readonly string[] k_BuiltNames = { "MenuRoot", "ControlsPanel", "SettingsPanel" };
+
+        // Names of the co-op UI that older scenes still contain (see ADR-001).
+        private static readonly string[] k_LegacyCoopNames = { "CoopPanel", "CoopCard", "CoopButton" };
 
         /// <summary>
         /// Destroys duplicate leftover copies of the screens. Keeps the primary one intact so
@@ -199,6 +190,38 @@ namespace StarVanguard.UI
                     Debug.LogWarning($"MainMenuScreen: removing duplicate '{builtName}' object.");
                     Destroy(matches[i]);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Destroys co-op widgets left over from the removed LAN layer (ADR-001). Runs on every
+        /// menu build so a scene authored before the removal never shows a dead Co-op button.
+        /// </summary>
+        private void RemoveLegacyCoopObjects()
+        {
+            Transform canvasRoot = m_Canvas.transform;
+            List<GameObject> matches = new List<GameObject>();
+
+            foreach (Transform child in canvasRoot)
+            {
+                if (System.Array.IndexOf(k_LegacyCoopNames, child.name) >= 0) matches.Add(child.gameObject);
+            }
+
+            // CoopButton may live inside MenuRoot instead of directly under the canvas.
+            if (m_Root != null)
+            {
+                foreach (Transform t in m_Root.GetComponentsInChildren<Transform>(true))
+                {
+                    if (t.name == "CoopButton") matches.Add(t.gameObject);
+                }
+            }
+
+            for (int i = matches.Count - 1; i >= 0; i--)
+            {
+                if (matches[i] == null) continue;
+                Debug.LogWarning($"MainMenuScreen: removing legacy co-op object '{matches[i].name}' (ADR-001).");
+                if (Application.isPlaying) Destroy(matches[i]);
+                else DestroyImmediate(matches[i]);
             }
         }
 
@@ -228,11 +251,13 @@ namespace StarVanguard.UI
                 launchBtn.onClick.AddListener(OnLaunchMission);
             }
 
+            // Co-op entry point was removed with the LAN layer (ADR-001). Hide any button that a
+            // previous bake left behind so the menu never shows a control that does nothing.
             Button coopBtn = FindChildComponent<Button>(i_Root.transform, "CoopButton");
             if (coopBtn != null)
             {
                 coopBtn.onClick.RemoveAllListeners();
-                coopBtn.onClick.AddListener(() => OpenPanel(UIPanelId.Coop));
+                coopBtn.gameObject.SetActive(false);
             }
 
             Button controlsBtn = FindChildComponent<Button>(i_Root.transform, "ControlsButton");
@@ -285,29 +310,6 @@ namespace StarVanguard.UI
             RefreshDifficultyButtons();
         }
 
-        private void BindCoopPanel(GameObject i_Root)
-        {
-            Button hostBtn = FindChildComponent<Button>(i_Root.transform, "HostButton");
-            if (hostBtn != null)
-            {
-                hostBtn.onClick.RemoveAllListeners();
-                hostBtn.onClick.AddListener(OnHostCoop);
-            }
-
-            Button joinBtn = FindChildComponent<Button>(i_Root.transform, "JoinButton");
-            if (joinBtn != null)
-            {
-                joinBtn.onClick.RemoveAllListeners();
-                joinBtn.onClick.AddListener(OnJoinCoop);
-            }
-
-            Button backBtn = FindChildComponent<Button>(i_Root.transform, "BackButton");
-            if (backBtn != null)
-            {
-                backBtn.onClick.RemoveAllListeners();
-                backBtn.onClick.AddListener(() => UIPanelRouter.Instance?.Back());
-            }
-        }
 
         /// <summary>
         /// A menu baked into an older version of the scene has different object names, so it
@@ -382,8 +384,6 @@ namespace StarVanguard.UI
 
             UITheme.CreateButton(column, "LaunchButton", "LAUNCH MISSION", UITheme.ButtonWidth, UITheme.ButtonHeight,
                 true, OnLaunchMission);
-            UITheme.CreateButton(column, "CoopButton", "CO-OP MULTIPLAYER", UITheme.ButtonWidth, UITheme.ButtonHeight,
-                false, () => OpenPanel(UIPanelId.Coop));
             UITheme.CreateButton(column, "ControlsButton", "CONTROLS & MANUAL", UITheme.ButtonWidth, UITheme.ButtonHeight,
                 false, () => OpenPanel(UIPanelId.Controls));
             UITheme.CreateButton(column, "SettingsButton", "SETTINGS", UITheme.ButtonWidth, UITheme.ButtonHeight,
@@ -507,66 +507,6 @@ namespace StarVanguard.UI
             m_BestScoreValue.SetText("{0:000000}", best);
         }
 
-        // ------------------------------------------------------------------- coop
-
-        private GameObject BuildCoopPanel()
-        {
-            RectTransform root = UITheme.CreateRect(m_Canvas.transform, "CoopPanel");
-            UITheme.StretchToParent(root);
-
-            Image dim = root.gameObject.AddComponent<Image>();
-            dim.color = new Color(0f, 0.02f, 0.06f, 0.82f);
-
-            Image card = UITheme.CreatePanelCard(root, "CoopCard", new Vector2(UITheme.FormPanelWidth, 460f));
-            card.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
-            card.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
-            card.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-            card.rectTransform.anchoredPosition = Vector2.zero;
-
-            TextMeshProUGUI title = UITheme.CreateText(
-                card.rectTransform, "Title", "CO-OP MULTIPLAYER", UITheme.H1, UITheme.TextPrimary,
-                TextAlignmentOptions.Center, FontStyles.Bold);
-            title.characterSpacing = 3f;
-            title.rectTransform.anchorMin = new Vector2(0f, 1f);
-            title.rectTransform.anchorMax = new Vector2(1f, 1f);
-            title.rectTransform.pivot = new Vector2(0.5f, 1f);
-            title.rectTransform.anchoredPosition = new Vector2(0f, -UITheme.PanelPadding);
-            title.rectTransform.sizeDelta = new Vector2(-80f, 60f);
-
-            TextMeshProUGUI info = UITheme.CreateText(
-                card.rectTransform, "Info", "LAN PROTOCOL  ·  PORT 7777  ·  UP TO 4 WINGMEN",
-                UITheme.Caption, UITheme.TextMuted, TextAlignmentOptions.Center);
-            info.rectTransform.anchorMin = new Vector2(0f, 1f);
-            info.rectTransform.anchorMax = new Vector2(1f, 1f);
-            info.rectTransform.pivot = new Vector2(0.5f, 1f);
-            info.rectTransform.anchoredPosition = new Vector2(0f, -110f);
-            info.rectTransform.sizeDelta = new Vector2(-80f, 26f);
-
-            RectTransform buttons = UITheme.CreateRect(card.rectTransform, "Buttons");
-            buttons.anchorMin = new Vector2(0.5f, 0.5f);
-            buttons.anchorMax = new Vector2(0.5f, 0.5f);
-            buttons.pivot = new Vector2(0.5f, 0.5f);
-            buttons.anchoredPosition = new Vector2(0f, -24f);
-            buttons.sizeDelta = new Vector2(UITheme.ButtonWidth, 220f);
-
-            VerticalLayoutGroup layout = buttons.gameObject.AddComponent<VerticalLayoutGroup>();
-            layout.spacing = UITheme.Gap;
-            layout.childAlignment = TextAnchor.MiddleCenter;
-            layout.childControlWidth = false;
-            layout.childControlHeight = false;
-            layout.childForceExpandWidth = false;
-            layout.childForceExpandHeight = false;
-
-            UITheme.CreateButton(buttons, "HostButton", "HOST SESSION", UITheme.ButtonWidth, UITheme.ButtonHeight,
-                true, OnHostCoop);
-            UITheme.CreateButton(buttons, "JoinButton", "JOIN WINGMAN", UITheme.ButtonWidth, UITheme.ButtonHeight,
-                false, OnJoinCoop);
-            UITheme.CreateButton(buttons, "BackButton", "BACK", UITheme.ButtonWidth, UITheme.ButtonHeightSmall,
-                false, () => UIPanelRouter.Instance?.Back());
-
-            return root.gameObject;
-        }
-
         // ----------------------------------------------------------------- actions
 
         private void OpenPanel(UIPanelId i_Id)
@@ -590,34 +530,6 @@ namespace StarVanguard.UI
             AudioManager.Instance?.Play(eSFXId.UIClick);
             Time.timeScale = 1f;
             SceneManager.LoadScene(k_GameplaySceneName);
-        }
-
-        private void OnHostCoop()
-        {
-            AudioManager.Instance?.Play(eSFXId.UIClick);
-            NetworkLobbyUI lobby = FindAnyObjectByType<NetworkLobbyUI>();
-            if (lobby != null)
-            {
-                lobby.StartHostLAN();
-            }
-            else
-            {
-                OnLaunchMission();
-            }
-        }
-
-        private void OnJoinCoop()
-        {
-            AudioManager.Instance?.Play(eSFXId.UIClick);
-            NetworkLobbyUI lobby = FindAnyObjectByType<NetworkLobbyUI>();
-            if (lobby != null)
-            {
-                lobby.JoinClientLAN();
-            }
-            else
-            {
-                OnLaunchMission();
-            }
         }
 
         private void OnExitGame()

@@ -31,7 +31,6 @@ public class UIManager : Singleton<UIManager>
     
     [Header("Overheat & Energy HUD (REA Spec)")]
     [SerializeField] private OverheatGaugeUI m_OverheatGaugeUI;
-    [SerializeField] private NetworkLobbyUI m_NetworkLobbyUI;
 
     [Header("UI Panels")]
     [SerializeField] private GameObject m_GameOverPanel;
@@ -49,12 +48,6 @@ public class UIManager : Singleton<UIManager>
         if (!m_OverheatGaugeUI)
         {
             m_OverheatGaugeUI = GetComponent<OverheatGaugeUI>() ?? gameObject.AddComponent<OverheatGaugeUI>();
-        }
-
-        // Ensure Network Lobby UI is active
-        if (!m_NetworkLobbyUI)
-        {
-            m_NetworkLobbyUI = GetComponent<NetworkLobbyUI>() ?? gameObject.AddComponent<NetworkLobbyUI>();
         }
 
         // Initialize all panels as inactive

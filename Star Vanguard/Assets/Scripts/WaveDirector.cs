@@ -709,8 +709,9 @@ public class WaveDirector : Singleton<WaveDirector>
         {
             m_CurrentBoss.InitializeBoss();
 
-            // Apply co-op HP scaling AFTER initialization, otherwise initializeBoss() overwrites it
-            m_CurrentBoss.ScaleForCoop(StarVanguardNetworkManager.GetActivePlayerCount());
+            // Single-player build (ADR-001): the LAN co-op layer was removed, so boss HP is
+            // whatever InitializeBoss() computed from the difficulty tier.
+            // When co-op returns, call m_CurrentBoss.ScaleForCoop(playerCount) here again.
         }
         else
         {

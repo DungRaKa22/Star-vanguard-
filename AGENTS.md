@@ -10,7 +10,7 @@
 * Project Unity nằm ở thư mục con: `Star Vanguard/` (có dấu cách — luôn quote đường dẫn).
 * Script: `Star Vanguard/Assets/Scripts/` (runtime), `Assets/Editor/` (tool), `Assets/Tests/` (sẽ tạo).
 * Scene: `BootstrapScene` (index 0, nơi ở duy nhất của persistent managers) → `MainMenuScene` → `GameplayScene`.
-* Networking (Mirror) đang **không hoạt động** — xem P0-1 trong báo cáo audit. Đừng giả định co-op chạy được.
+* **Co-op LAN (Mirror) đã bị cắt bỏ** theo `docs/ADR-001-coop.md`. Đừng thêm lại code `#if MIRROR` hay UI Co-op; muốn làm lại co-op phải đáp ứng đủ 5 điều kiện ở mục 5 của ADR-001 và tạo ADR mới.
 
 ## 1. Luật cứng (vi phạm = revert ngay)
 
@@ -61,13 +61,14 @@ COMMIT → "T-xxx: mô tả ngắn" (1 mục đích / commit), cập nhật docs
 | :--- | :--- | :--- |
 | `UIManager.cs:51,57` | tự `AddComponent` component UI lúc runtime | T-201 |
 | `OverheatGaugeUI.cs` | HUD vẽ bằng `OnGUI`, GC mỗi frame, emoji không có glyph | T-201 |
-| `Assets/Scripts/Networking/*` | nằm trong `#if MIRROR` nhưng không có Mirror, không được gắn vào scene | T-202/T-203 |
+| ~~`Assets/Scripts/Networking/*`~~ | ✅ đã xoá theo ADR-001 | T-202 (xong) |
 | `AudioManager.cs:85-92` | 1 AudioSource + đổi pitch toàn cục | T-302 |
 | `Bomb.cs:47-59`, `PoolManager.cs:217-278` | `FindObjectsByType` trong luồng gameplay | T-305 |
 | `PlayerShooting.cs:202` | `new float[]` mỗi phát Plasma | T-305 |
 | `GameManager.cs:53-56, 97-100` | ép `SetResolution` 2 lần, bỏ qua setting người chơi | T-304 |
 | `MainMenuScene.unity` (12.8k dòng) | UI dựng bằng code, scene phình to | T-401 |
-| `HomeScreenController.cs`, `ControlsPanelController.cs` | dead code | T-402 |
+| `ControlsPanelController.cs` | dead code | T-402 |
+| `MainMenuScene` còn `CoopPanel/CoopCard/CoopButton` | object UI chết, cần dọn bằng menu Editor | T-204 |
 
 ## 6. An toàn & Git
 

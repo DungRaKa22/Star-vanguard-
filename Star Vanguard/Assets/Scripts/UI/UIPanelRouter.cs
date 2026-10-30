@@ -12,7 +12,6 @@ namespace StarVanguard.UI
         Settings = 2,
         Controls = 3,
         Leaderboard = 4,
-        Coop = 5,
         Pause = 6,
         GameOver = 7,
         NewHighScore = 8,

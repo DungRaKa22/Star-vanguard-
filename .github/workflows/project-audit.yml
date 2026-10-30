@@ -1,8 +1,13 @@
 name: Project audit (static)
 
-# Chạy kiểm tra tĩnh trên mã nguồn Unity mà KHÔNG cần cài Unity Editor.
-# Giai đoạn 1 (nay): chỉ báo cáo, không chặn PR (continue-on-error).
-# Giai đoạn 2 (sau T-101/T-201): bỏ `continue-on-error` để biến thành gate bắt buộc.
+# Kiểm tra tĩnh trên mã nguồn Unity, KHÔNG cần cài Unity Editor.
+#
+# Giai đoạn 1 (hiện tại) — CHẾ ĐỘ BÁO CÁO:
+#   bước audit có `continue-on-error: true` nên job/run luôn XANH kể cả khi có FAIL.
+#   Kết quả vẫn hiện đầy đủ ở Summary và trong artifact `audit-report`.
+# Giai đoạn 2 (sau T-101/T-201 trong docs/ANTIGRAVITY_BACKLOG.md) — CHẾ ĐỘ GATE:
+#   xoá dòng `continue-on-error: true` của bước "Static project audit" là xong,
+#   từ đó PR có FAIL sẽ bị chặn merge.
 
 on:
   push:
@@ -10,38 +15,49 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   audit:
-    runs-on: ubuntu-latest
-    continue-on-error: true
+    # Pin runner để kết quả ổn định (ubuntu-latest sẽ chuyển sang Ubuntu 26).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.11"
 
       - name: Static project audit
+        id: audit
+        continue-on-error: true # <-- Giai đoạn 2: xoá dòng này để bật gate
         run: python3 Tools/check_project.py --json audit-report.json
 
       - name: Summary
         if: always()
+        run: python3 Tools/ci_summary.py audit-report.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report the audit outcome
+        if: always()
         run: |
-          echo "### Static audit" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          python3 Tools/check_project.py | tail -30 >> "$GITHUB_STEP_SUMMARY" || true
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "Kết quả bước audit: ${{ steps.audit.outcome }}"
+          if [ "${{ steps.audit.outcome }}" = "failure" ]; then
+            echo "::warning title=Static audit::Có FAIL trong mã nguồn — xem artifact audit-report.json (giai đoạn báo cáo, chưa chặn PR)."
+          fi
 
       - name: Upload report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: audit-report
           path: audit-report.json
           if-no-files-found: ignore
+          retention-days: 30
 
-# Ghi chú: công việc nặng hơn (compile + Play Mode test) cần Unity License và
-# self-hosted runner có Unity 6000.5.7f1 — xem T-001/T-601 trong docs/ANTIGRAVITY_BACKLOG.md
+# Ghi chú: công việc nặng hơn (compile + Play Mode test) cần Unity License và runner
+# self-hosted có Unity 6000.5.7f1 — xem T-101/T-601 trong docs/ANTIGRAVITY_BACKLOG.md.

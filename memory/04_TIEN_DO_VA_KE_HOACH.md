@@ -1,5 +1,9 @@
 # 🎯 04. TIẾN ĐỘ VÀ KẾ HOẠCH HÀNH ĐỘNG (PROGRESS & ACTION BACKLOG)
 
+> ⚠️ **Đính chính 30/10/2026:** Phase 5 (Co-op LAN) được đánh dấu ✅ trong bản cũ nhưng **chưa bao giờ chạy được**
+> (không có gói Mirror, code bọc trong `#if MIRROR` chưa từng được định nghĩa). Đã cắt bỏ theo
+> [`docs/ADR-001-coop.md`](../docs/ADR-001-coop.md). Bảng dưới giữ nguyên lịch sử, riêng Phase 5 đã được sửa trạng thái.
+
 Tài liệu này tổng hợp trạng thái tiến độ hiện tại theo 5 Phase lớn và danh mục công việc chi tiết (Backlog) đã được thống nhất để triển khai cho dự án **Star Vanguard**.
 
 ---
@@ -12,7 +16,7 @@ Tài liệu này tổng hợp trạng thái tiến độ hiện tại theo 5 Pha
 | **Phase 2** | Dịch ngược & Trích xuất Toàn diện `ChickenInvaders 5` | `@REA-Analyst` | 100% | ✅ Hoàn tất |
 | **Phase 3** | Tái cấu trúc (Refactor) C# & 4 Hệ thống Toán học | `@Unity-Coder` | 100% | ✅ Hoàn tất |
 | **Phase 4** | Cải tổ Mỹ thuật, Giao diện 1080p & Vũ khí REA | `@Asset-UI` + `@Unity-Coder` | 100% | ✅ Hoàn tất |
-| **Phase 5** | Kiến trúc Mạng Co-op Mirror & Nghiệm thu | `@Net-Engineer` + `@Architect` | 100% | ✅ Hoàn tất |
+| **Phase 5** | ~~Kiến trúc Mạng Co-op Mirror~~ → **Đã cắt bỏ** 30/10/2026 (ADR-001): lớp mạng chưa từng biên dịch, game là 1 người | `@Net-Engineer` + `@Architect` | 100% (huỷ phạm vi) | ⛔ Huỷ theo ADR-001 |
 | **Phase 6** | Tái cấu trúc 1080p, Nether Star & Tách Scene Menu | `@Unity-Coder` + `@Asset-UI` | 100% | ✅ Hoàn tất |
 | **Phase 7** | Kiến trúc UITheme, UIPanelRouter & PlayMode Smoke Testing | `@Unity-Coder` + `@Architect` | 100% | ✅ Hoàn tất |
 | **Phase 8** | Tách Dedicated Bootstrap Scene & Triệt Tiêu Bản Copy | `@Architect` + `@Unity-Coder` | 100% | ✅ Hoàn tất |

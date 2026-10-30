@@ -564,6 +564,27 @@ def check_docs_drift(project: str) -> None:
         add(WARN, "docs_cleanup", "Khong co README.md o root (nguoi moi khong biet cach chay)")
 
 
+def check_legacy_coop(project: str) -> None:
+    """ADR-001: da cat bo lop mang LAN. Scene con giu object Coop la dau vet chua don."""
+    names = ("CoopPanel", "CoopCard", "CoopButton")
+    leftovers: list[str] = []
+    for path in iter_files(os.path.join(project, "Assets"), (".unity",)):
+        text = read(path)
+        for name in names:
+            if re.search(rf"^  m_Name: {name}\s*$", text, re.M):
+                leftovers.append(f"{rel(project, path)} -> {name}")
+    if leftovers:
+        add(
+            WARN,
+            "legacy_coop",
+            "Scene con object Co-op (crash khong, nhung UI chet). Chay menu "
+            "'Tools/Star Vanguard/1b. Remove Legacy Co-op UI from MainMenuScene and Save'",
+            leftovers,
+        )
+    else:
+        add(INFO, "legacy_coop", "Khong con object Co-op trong scene")
+
+
 def check_perf_settings(project: str) -> None:
     quality = os.path.join(project, "ProjectSettings", "QualitySettings.asset")
     if os.path.exists(quality):
@@ -667,6 +688,7 @@ def main() -> int:
     check_hud_duplication(project)
     check_hot_paths(project)
     check_camera_main_everywhere(project)
+    check_legacy_coop(project)
     check_perf_settings(project)
     check_scene_size(project)
     check_dead_scripts(project, guid_to_asset)

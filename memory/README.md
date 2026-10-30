@@ -1,9 +1,22 @@
 # 🧠 STAR VANGUARD ONLINE - PROJECT MEMORY HUB
-> **Dự án:** Star Vanguard Online (Chiến Cơ Không Gian Co-op LAN 1920x1080)  
+> **Dự án:** Star Vanguard (Chiến Cơ Không Gian, **1 người chơi**, 1920x1080)  
 > **Phiên bản Engine Target:** Unity 6 (`6000.5.7f1`) - Universal Render Pipeline 2D (URP)  
-> **Networking:** Mirror Networking (Host/Client Co-op LAN 2-4 Players)  
+> **Networking:** **Không có** — lớp Co-op LAN/Mirror đã bị cắt bỏ ngày 30/10/2026 (xem `docs/ADR-001-coop.md`)  
 > **Dự án phân tích nhị phân gốc:** *Chicken Invaders 5: Cluck of the Dark Side* (`CI5demo.exe`) qua bộ công cụ **REA** (`reverse-engineer-anything`)  
-> **Thời gian cập nhật:** 29/10/2026 (Phiên bản Visual Menu Scene Authoring & Baker Tool, Play Mode 55/55 PASS)  
+> **Thời gian cập nhật:** 30/10/2026 (Audit kỹ thuật + ADR-001 cắt bỏ Co-op; xem `docs/AUDIT_2026-10-30.md`)  
+
+---
+
+> ⚠️ **ĐÍNH CHÍNH 30/10/2026 — đọc trước khi tin số liệu bên dưới**
+> Kiểm tra lại toàn bộ mã nguồn cho thấy một số mục trong thư mục này được đánh dấu ✅ *trước khi* tính năng
+> thực sự chạy được. Cụ thể:
+> * **Phase 5 (Co-op LAN/Mirror) KHÔNG hoạt động**: không có gói Mirror, toàn bộ code mạng nằm trong `#if MIRROR`
+>   mà `MIRROR` chưa từng được định nghĩa → đã **cắt bỏ** theo `docs/ADR-001-coop.md`.
+> * Số liệu **"55/55 assertion PASS"** thực tế là script Editor tự chế (57 lời gọi `Assert`), **không phải NUnit**;
+>   chưa có test tự động thật (task T-102).
+> * Link `file:///c:/Documents/...` trong các tài liệu này là đường dẫn tuyệt đối trên máy cũ → **chết khi clone ở máy khác**.
+>
+> Nguồn đúng hiện tại: `docs/AUDIT_2026-10-30.md`, `docs/ADR-001-coop.md`, `docs/ANTIGRAVITY_BACKLOG.md`, `AGENTS.md`.
 
 ---
 

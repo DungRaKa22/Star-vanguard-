@@ -190,7 +190,7 @@ namespace StarVanguard.EditorTools
             string[] panelNames =
             {
                 "MenuRoot", "SettingsPanel", "ControlsPanel", "LeaderboardPanel",
-                "CoopPanel", "PausePanel", "GameOverPanel", "NewHighScorePanel",
+                "PausePanel", "GameOverPanel", "NewHighScorePanel",
             };
             foreach (string panelName in panelNames)
             {
@@ -337,7 +337,7 @@ namespace StarVanguard.EditorTools
 
         private static readonly string[] k_AllowedCanvasChildren =
         {
-            "MenuRoot", "CoopPanel", "ControlsPanel",
+            "MenuRoot", "ControlsPanel",
             "SettingsPanel", "LeaderboardPanel", "PausePanel", "GameOverPanel", "NewHighScorePanel",
         };
 

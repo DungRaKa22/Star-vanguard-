@@ -17,9 +17,10 @@
 | **T-002** | P1 | README root + gộp tài liệu trùng + LICENSE + xoá link tuyệt đối trong `memory/` | `README.md`, `docs/` | — | — | 0.5d |
 | **T-101** | P0 | Tạo 5 assembly definition (Runtime/UI/Editor/Net/Tests) + sửa mọi `using` | `Assets/**/*.asmdef` | `create_script`, `refresh_unity` | G1 | 1d |
 | **T-102** | P0 | Chuyển `StarVanguardPlayModeSmoke` thành NUnit test thật (EditMode + PlayMode) | `Assets/Tests/**` | `run_tests`, `get_test_job` | G1+G2 | 1.5d |
-| **T-103** | P0 | ADR: chọn phương án Co-op (A: làm Mirror / B: cắt bỏ) — ghi quyết định, không code | `docs/ADR-001-coop.md` | — | — | 0.2d |
+| **T-103** | ✅ xong | ADR-001: chọn phương án **B — cắt bỏ Co-op LAN** | `docs/ADR-001-coop.md` | — | — | 0.2d |
 | **T-201** | P0 | Hợp nhất HUD: bỏ `OnGUI`, chuyển OverheatGauge sang uGUI/TMP, bỏ `AddComponent` ngầm, bỏ emoji | `OverheatGaugeUI.cs`, `UIManager.cs`, `GameplayScene` | `manage_components`, `manage_scene`, `manage_editor` | G1+G2+G3 | 1.5d |
-| **T-202** | P0 | (Nếu chọn B) Xoá `Assets/Scripts/Networking/`, nút Co-op, field liên quan; sửa `WaveDirector.cs:713` | Networking, `MainMenuScreen.cs` | `manage_components`, `manage_asset` | G1+G2 | 0.5d |
+| **T-202** | ✅ xong (code) | (Phương án B) Xoá `Assets/Scripts/Networking/` + `HomeScreenController`, bỏ `UIPanelId.Coop`, bỏ panel/nút Co-op, bỏ `m_NetworkLobbyUI`, bỏ `ScaleForCoop` call | Networking, `MainMenuScreen.cs`, `UIManager.cs`, `WaveDirector.cs` | edit tool | G3 ✅ / G1+G2 chờ Unity | 0.5d |
+| **T-204** | P0 | ⚠️ **Còn lại của T-202:** mở Unity chạy `Tools ▸ Star Vanguard ▸ 1b. Remove Legacy Co-op UI from MainMenuScene and Save` rồi Play thử menu | `MainMenuScene.unity` | `execute_menu_item` | G1+G2+G3 | 0.1d |
 | **T-203** | P0 | (Nếu chọn A) Cài Mirror + `versionDefines MIRROR` + gắn NetworkManager/Player prefab + test 2 instance | `Packages/manifest.json`, asmdef, prefabs | `manage_packages`, `manage_prefabs` | G1+G2 | 3–5d |
 | **T-301** | P1 | Migrate gameplay input sang Input System (InputReader + gamepad + rebinding) | 5 script, `.inputactions` | `script_apply_edits`, `validate_script` | G1+G2 | 2d |
 | **T-302** | P1 | Audio: AudioMixer (Master/Music/SFX) + pool 8–12 AudioSource, bỏ đổi pitch toàn cục | `AudioManager.cs`, `Assets/Audio/Mixer.mixer` | `manage_asset`, `manage_components` | G1+G2 | 1.5d |
@@ -138,9 +139,9 @@ public class PlayModeSmokeTests
 
 ---
 
-### T-202 / T-203 — Quyết định Co-op
+### T-202 / T-203 — Quyết định Co-op (✅ đã chọn B, xem `docs/ADR-001-coop.md`)
 
-| | Phương án B (khuyến nghị cho BTL) | Phương án A |
+| | **Phương án B — ĐÃ CHỌN ✅** | Phương án A (để sau, xem mục 5 của ADR-001) |
 | :--- | :--- | :--- |
 | Việc | Xoá `Assets/Scripts/Networking/` (4 file), bỏ nút Co-op trong `MainMenuScreen`, bỏ `UIPanelId.Coop` hoặc chuyển thành "2 người cùng bàn phím", sửa `WaveDirector.cs:713` bỏ gọi `GetActivePlayerCount()` | Cài Mirror, thêm `versionDefines`, gắn `NetworkManager` + `NetworkPlayerController`, spawn prefab, sync boss HP |
 | Thời gian | 0.5d | 3–5d + test 2 máy |
@@ -170,4 +171,5 @@ Với task UI/HUD: thêm **ảnh chụp trước/sau** (Play Mode).
 | Ngày | Task | Kết quả | Gate | Ghi chú |
 | :--- | :--- | :--- | :-: | :--- |
 | 30/10/2026 | Audit + T-003 | Báo cáo `docs/AUDIT_2026-10-30.md`; `check_project.py` = 1 FAIL / 11 WARN / 12 OK | G3 | FAIL duy nhất = thiếu Mirror (đúng thực trạng) |
-| | | | | |
+| 30/10/2026 | T-103 + T-202 | Cắt bỏ Co-op LAN theo ADR-001: xoá 4 script Networking + `HomeScreenController`, bỏ `UIPanelId.Coop`, bỏ panel/nút Co-op, bỏ `m_NetworkLobbyUI`, thêm Editor cleanup tool + check `legacy_coop` | G3 ✅ (0 FAIL / 10 WARN / 13 OK) | G1/G2 **chưa chạy** — cần mở Unity xác nhận compile + Play Mode |
+| 30/10/2026 | T-204 (mở) | Chờ chạy menu cleanup trong Unity để dọn `CoopPanel/CoopCard/CoopButton` khỏi `MainMenuScene` | — | Sau đó WARN `legacy_coop` sẽ hết |
