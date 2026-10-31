@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 [SceneBoundSingleton]
@@ -5,6 +6,41 @@ public class PlayerController : Singleton<PlayerController>
 {
     // The ship lives in the scene; it must be re-created with its scene
     protected override bool PersistAcrossScenes => false;
+
+    /// <summary>
+    /// Active player ships registry for multi-target targeting in Co-op mode (ADR-002).
+    /// </summary>
+    public static readonly List<Transform> ActivePlayers = new List<Transform>();
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticRegistry()
+    {
+        ActivePlayers.Clear();
+    }
+
+    /// <summary>
+    /// Returns the closest player transform to a given position (or single-player instance).
+    /// </summary>
+    public static Transform GetClosestPlayer(Vector3 fromPosition)
+    {
+        if (ActivePlayers.Count == 0) return HasInstance ? Instance.transform : null;
+        if (ActivePlayers.Count == 1) return ActivePlayers[0];
+
+        Transform closest = null;
+        float minSqrDist = float.MaxValue;
+        for (int i = 0; i < ActivePlayers.Count; i++)
+        {
+            Transform p = ActivePlayers[i];
+            if (p == null) continue;
+            float sqrDist = (p.position - fromPosition).sqrMagnitude;
+            if (sqrDist < minSqrDist)
+            {
+                minSqrDist = sqrDist;
+                closest = p;
+            }
+        }
+        return closest != null ? closest : (HasInstance ? Instance.transform : null);
+    }
 
     // Animation parameter hashes for performance
     private static readonly int sr_MovingLeft = Animator.StringToHash("MovingLeft");
@@ -42,6 +78,19 @@ public class PlayerController : Singleton<PlayerController>
     {
         base.Awake(); // Register with Singleton<PlayerController> (instance + DontDestroyOnLoad)
         m_Camera = Camera.main;
+    }
+
+    private void OnEnable()
+    {
+        if (!ActivePlayers.Contains(transform))
+        {
+            ActivePlayers.Add(transform);
+        }
+    }
+
+    private void OnDisable()
+    {
+        ActivePlayers.Remove(transform);
     }
     
     private void Start()

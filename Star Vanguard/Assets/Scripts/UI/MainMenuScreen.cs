@@ -45,7 +45,7 @@ namespace StarVanguard.UI
             if (Input.GetKeyDown(KeyCode.Escape) && UIPanelRouter.Instance != null)
             {
                 UIPanelRouter router = UIPanelRouter.Instance;
-                if (router.Current == UIPanelId.Settings || router.Current == UIPanelId.Controls)
+                if (router.Current == UIPanelId.Settings || router.Current == UIPanelId.Controls || router.Current == UIPanelId.Coop)
                 {
                     router.Back();
                 }
@@ -113,6 +113,11 @@ namespace StarVanguard.UI
                 settingsObj.SetActive(false);
             }
 
+            Transform existingCoop = m_Canvas.transform.Find(CoopScreen.RootName);
+            GameObject coopPanel = existingCoop != null ? existingCoop.gameObject : CoopScreen.Build(m_Canvas.transform);
+            coopPanel.SetActive(false);
+            router.Register(UIPanelId.Coop, coopPanel);
+
             if (GameManager.Instance == null || GameManager.Instance.GameState == eGameState.Menu)
             {
                 router.Show(UIPanelId.Home);
@@ -164,7 +169,7 @@ namespace StarVanguard.UI
 
         // ------------------------------------------------------------ stale cleanup
 
-        private static readonly string[] k_BuiltNames = { "MenuRoot", "ControlsPanel", "SettingsPanel" };
+        private static readonly string[] k_BuiltNames = { "MenuRoot", "ControlsPanel", "SettingsPanel", CoopScreen.RootName };
 
         // Names of the co-op UI that older scenes still contain (see ADR-001).
         private static readonly string[] k_LegacyCoopNames = { "CoopPanel", "CoopCard", "CoopButton" };
@@ -384,7 +389,9 @@ namespace StarVanguard.UI
 
             UITheme.CreateButton(column, "LaunchButton", "LAUNCH MISSION", UITheme.ButtonWidth, UITheme.ButtonHeight,
                 true, OnLaunchMission);
-            UITheme.CreateButton(column, "ControlsButton", "CONTROLS & MANUAL", UITheme.ButtonWidth, UITheme.ButtonHeight,
+            UITheme.CreateButton(column, "CoopButton", "CHIẾN DỊCH CO-OP (LAN)", UITheme.ButtonWidth, UITheme.ButtonHeightSmall,
+                false, () => OpenPanel(UIPanelId.Coop));
+            UITheme.CreateButton(column, "ControlsButton", "CONTROLS & MANUAL", UITheme.ButtonWidth, UITheme.ButtonHeightSmall,
                 false, () => OpenPanel(UIPanelId.Controls));
             UITheme.CreateButton(column, "SettingsButton", "SETTINGS", UITheme.ButtonWidth, UITheme.ButtonHeight,
                 false, () => OpenPanel(UIPanelId.Settings));

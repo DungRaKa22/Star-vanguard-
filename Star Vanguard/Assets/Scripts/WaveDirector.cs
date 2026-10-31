@@ -501,7 +501,8 @@ public class WaveDirector : Singleton<WaveDirector>
             for(int i = 0; i < perBurst; i++)
             {
                 float x = Random.Range(left.x, right.x);
-                var enemy = PoolManager.Instance.GetEnemy(new Vector3(x, right.y + 0.7f, 0f), Quaternion.identity);
+                Vector3 spawnPos = new Vector3(x, right.y + 0.7f, 0f);
+                var enemy = PoolManager.Instance.GetEnemy(spawnPos, Quaternion.identity);
                 if (enemy != null)
                 {
                     var mover = enemy.GetComponent<EnemyMover>();
@@ -511,7 +512,8 @@ public class WaveDirector : Singleton<WaveDirector>
                         mover.Speed = entrySpeed;
                         mover.DiveDelay = Random.Range(0.4f, 0.9f);
                         mover.DiveSpeed = 7f + Random.Range(-0.5f, 0.5f);
-                        mover.InitDive(m_Player);
+                        Transform target = PlayerController.GetClosestPlayer(spawnPos);
+                        mover.InitDive(target != null ? target : m_Player);
                         r_ActiveEnemies.Add(enemy);
                     }
                     else

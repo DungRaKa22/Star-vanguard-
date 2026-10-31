@@ -7,6 +7,7 @@ using UnityEngine.UI;
 using TMPro;
 using StarVanguard;
 using StarVanguard.UI;
+using StarVanguard.Net;
 
 namespace StarVanguard.Tests
 {
@@ -71,6 +72,34 @@ namespace StarVanguard.Tests
 
             Assert.IsTrue(referencesRuntime, 
                 "StarVanguard.UI must have an explicit assembly reference to StarVanguard.Runtime.");
+        }
+
+        [Test]
+        public void NetAssembly_LoadsExpectedNetcodeTypes()
+        {
+            Type bootType = typeof(NetworkManagerBootstrap);
+            Type bridgeType = typeof(NetworkPlayerBridge);
+            Type waveCoordType = typeof(CoopWaveCoordinator);
+            Type menuPresenterType = typeof(CoopMenuPresenter);
+
+            Assert.IsNotNull(bootType, "NetworkManagerBootstrap must be resolvable from StarVanguard.Net");
+            Assert.IsNotNull(bridgeType, "NetworkPlayerBridge must be resolvable from StarVanguard.Net");
+            Assert.IsNotNull(waveCoordType, "CoopWaveCoordinator must be resolvable from StarVanguard.Net");
+            Assert.IsNotNull(menuPresenterType, "CoopMenuPresenter must be resolvable from StarVanguard.Net");
+        }
+
+        [Test]
+        public void ArchitecturalConstraint_RuntimeDoesNotReferenceNet()
+        {
+            Assembly runtimeAssembly = typeof(GameManager).Assembly;
+            AssemblyName[] referencedAssemblies = runtimeAssembly.GetReferencedAssemblies();
+
+            bool referencesNet = referencedAssemblies.Any(a =>
+                string.Equals(a.Name, "StarVanguard.Net", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(a.Name, "Unity.Netcode.Runtime", StringComparison.OrdinalIgnoreCase));
+
+            Assert.IsFalse(referencesNet,
+                "Violation of ADR-002: StarVanguard.Runtime must NEVER reference StarVanguard.Net or Unity.Netcode.Runtime!");
         }
 
         [Test]

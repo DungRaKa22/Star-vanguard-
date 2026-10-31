@@ -4,6 +4,7 @@
     "references": [
         "StarVanguard.Runtime",
         "StarVanguard.UI",
+        "StarVanguard.Net",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "Unity.InputSystem",

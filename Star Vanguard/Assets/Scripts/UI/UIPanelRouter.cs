@@ -12,6 +12,7 @@ namespace StarVanguard.UI
         Settings = 2,
         Controls = 3,
         Leaderboard = 4,
+        Coop = 5,
         Pause = 6,
         GameOver = 7,
         NewHighScore = 8,
@@ -35,6 +36,7 @@ namespace StarVanguard.UI
         {
             (UIPanelId.Settings, "SettingsPanel"),
             (UIPanelId.Controls, "ControlsPanel"),
+            (UIPanelId.Coop, "CoopModalPanel"),
             (UIPanelId.Leaderboard, "LeaderboardPanel"),
             (UIPanelId.Pause, "PausePanel"),
             (UIPanelId.GameOver, "GameOverPanel"),

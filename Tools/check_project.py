@@ -278,6 +278,11 @@ def check_networking(project: str, guid_to_asset: dict[str, str]) -> None:
     manifest_path = os.path.join(project, "Packages", "manifest.json")
     manifest = read(manifest_path) if os.path.exists(manifest_path) else ""
 
+    # ADR-002: Unity Netcode for GameObjects (NGO)
+    if "com.unity.netcode.gameobjects" in manifest.lower():
+        add(INFO, "netcode_ngo", "Unity Netcode for GameObjects (NGO) da duoc cai dat va cau hinh")
+        return
+
     mirror_package = "mirror" in manifest.lower() or "com.coplaydev" in manifest.lower()
     define_locations: list[str] = []
     for path in iter_files(assets, (".asmdef", ".rsp")):
