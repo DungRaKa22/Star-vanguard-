@@ -29,6 +29,7 @@ namespace StarVanguard.UI
     public class UIPanelRouter : MonoBehaviour
     {
         public static UIPanelRouter Instance { get; private set; }
+        public static event System.Action<UIPanelId, GameObject> OnPanelRegistered;
 
         // Scene objects are discovered by name so the router keeps working even if a
         // designer renames nothing but moves panels around the hierarchy.
@@ -151,6 +152,8 @@ namespace StarVanguard.UI
             m_Groups[i_Id] = group;
 
             SetPanelVisible(i_Id, false, true);
+
+            OnPanelRegistered?.Invoke(i_Id, i_Panel);
         }
 
         public bool Has(UIPanelId i_Id) => m_Panels.TryGetValue(i_Id, out GameObject panel) && panel != null;

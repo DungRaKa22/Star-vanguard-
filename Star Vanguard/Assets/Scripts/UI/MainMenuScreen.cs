@@ -172,7 +172,7 @@ namespace StarVanguard.UI
         private static readonly string[] k_BuiltNames = { "MenuRoot", "ControlsPanel", "SettingsPanel", CoopScreen.RootName };
 
         // Names of the co-op UI that older scenes still contain (see ADR-001).
-        private static readonly string[] k_LegacyCoopNames = { "CoopPanel", "CoopCard", "CoopButton" };
+        private static readonly string[] k_LegacyCoopNames = { "CoopPanel", "CoopCard" };
 
         /// <summary>
         /// Destroys duplicate leftover copies of the screens. Keeps the primary one intact so
@@ -212,14 +212,7 @@ namespace StarVanguard.UI
                 if (System.Array.IndexOf(k_LegacyCoopNames, child.name) >= 0) matches.Add(child.gameObject);
             }
 
-            // CoopButton may live inside MenuRoot instead of directly under the canvas.
-            if (m_Root != null)
-            {
-                foreach (Transform t in m_Root.GetComponentsInChildren<Transform>(true))
-                {
-                    if (t.name == "CoopButton") matches.Add(t.gameObject);
-                }
-            }
+            // Old CoopButton check removed under ADR-002 (LanCoopButton is active)
 
             for (int i = matches.Count - 1; i >= 0; i--)
             {
@@ -256,13 +249,33 @@ namespace StarVanguard.UI
                 launchBtn.onClick.AddListener(OnLaunchMission);
             }
 
-            // Co-op entry point was removed with the LAN layer (ADR-001). Hide any button that a
-            // previous bake left behind so the menu never shows a control that does nothing.
-            Button coopBtn = FindChildComponent<Button>(i_Root.transform, "CoopButton");
+            // Co-op LAN entry point (ADR-002)
+            Button coopBtn = FindChildComponent<Button>(i_Root.transform, "LanCoopButton");
+            if (coopBtn == null)
+            {
+                coopBtn = FindChildComponent<Button>(i_Root.transform, "CoopButton");
+            }
+
+            if (coopBtn == null)
+            {
+                Transform leftCol = i_Root.transform.Find("LeftColumn");
+                if (leftCol != null)
+                {
+                    coopBtn = UITheme.CreateButton(leftCol, "LanCoopButton", "CHIẾN DỊCH CO-OP (LAN)", UITheme.ButtonWidth, UITheme.ButtonHeightSmall,
+                        false, () => OpenPanel(UIPanelId.Coop));
+                    Transform launch = leftCol.Find("LaunchButton");
+                    if (launch != null)
+                    {
+                        coopBtn.transform.SetSiblingIndex(launch.GetSiblingIndex() + 1);
+                    }
+                }
+            }
+
             if (coopBtn != null)
             {
+                coopBtn.gameObject.SetActive(true);
                 coopBtn.onClick.RemoveAllListeners();
-                coopBtn.gameObject.SetActive(false);
+                coopBtn.onClick.AddListener(() => OpenPanel(UIPanelId.Coop));
             }
 
             Button controlsBtn = FindChildComponent<Button>(i_Root.transform, "ControlsButton");
@@ -389,7 +402,7 @@ namespace StarVanguard.UI
 
             UITheme.CreateButton(column, "LaunchButton", "LAUNCH MISSION", UITheme.ButtonWidth, UITheme.ButtonHeight,
                 true, OnLaunchMission);
-            UITheme.CreateButton(column, "CoopButton", "CHIẾN DỊCH CO-OP (LAN)", UITheme.ButtonWidth, UITheme.ButtonHeightSmall,
+            UITheme.CreateButton(column, "LanCoopButton", "CHIẾN DỊCH CO-OP (LAN)", UITheme.ButtonWidth, UITheme.ButtonHeightSmall,
                 false, () => OpenPanel(UIPanelId.Coop));
             UITheme.CreateButton(column, "ControlsButton", "CONTROLS & MANUAL", UITheme.ButtonWidth, UITheme.ButtonHeightSmall,
                 false, () => OpenPanel(UIPanelId.Controls));

@@ -21,9 +21,23 @@ namespace StarVanguard.Net
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoRegisterHook()
         {
+            StarVanguard.UI.UIPanelRouter.OnPanelRegistered -= HandlePanelRegistered;
+            StarVanguard.UI.UIPanelRouter.OnPanelRegistered += HandlePanelRegistered;
             SceneManager.sceneLoaded -= OnSceneLoaded;
             SceneManager.sceneLoaded += OnSceneLoaded;
             TryAttach();
+        }
+
+        private static void HandlePanelRegistered(StarVanguard.UI.UIPanelId id, GameObject panel)
+        {
+            if (id == StarVanguard.UI.UIPanelId.Coop && panel != null)
+            {
+                if (panel.GetComponent<CoopMenuPresenter>() == null)
+                {
+                    panel.AddComponent<CoopMenuPresenter>();
+                    Debug.Log("[STARVANGUARD-NET] Successfully attached CoopMenuPresenter via UIPanelRouter event!");
+                }
+            }
         }
 
         private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
@@ -35,10 +49,19 @@ namespace StarVanguard.Net
         {
             if (SceneManager.GetActiveScene().name == "MainMenuScene")
             {
-                GameObject coopObj = GameObject.Find("CoopModalPanel");
-                if (coopObj != null && coopObj.GetComponent<CoopMenuPresenter>() == null)
+                Canvas[] canvases = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include);
+                foreach (Canvas canvas in canvases)
                 {
-                    coopObj.AddComponent<CoopMenuPresenter>();
+                    Transform t = canvas.transform.Find("CoopModalPanel");
+                    if (t != null)
+                    {
+                        if (t.GetComponent<CoopMenuPresenter>() == null)
+                        {
+                            t.gameObject.AddComponent<CoopMenuPresenter>();
+                            Debug.Log("[STARVANGUARD-NET] Successfully attached CoopMenuPresenter to CoopModalPanel!");
+                        }
+                        return;
+                    }
                 }
             }
         }
@@ -57,28 +80,50 @@ namespace StarVanguard.Net
             if (m_StatusText == null) m_StatusText = transform.Find("Card/StatusBox/Txt_Status")?.GetComponent<TextMeshProUGUI>();
         }
 
-        private void Start()
+        private void OnEnable()
         {
             ResolveUIBindings();
+            AttachListeners();
 
             if (m_IpInputField != null && string.IsNullOrEmpty(m_IpInputField.text))
             {
                 m_IpInputField.text = NetworkManagerBootstrap.k_DefaultAddress;
             }
 
-            if (m_HostButton != null) m_HostButton.onClick.AddListener(OnHostClicked);
-            if (m_JoinButton != null) m_JoinButton.onClick.AddListener(OnJoinClicked);
-            if (m_BackButton != null) m_BackButton.onClick.AddListener(OnBackClicked);
-
-            if (NetworkManagerBootstrap.Instance != null)
-            {
-                NetworkManagerBootstrap.Instance.OnStatusChanged += UpdateStatus;
-            }
-
             UpdateStatus("Sẵn sàng tạo phòng Host hoặc kết nối tới địa chỉ IP...");
         }
 
-        private void OnDestroy()
+        private void OnDisable()
+        {
+            DetachListeners();
+        }
+
+        private void AttachListeners()
+        {
+            if (m_HostButton != null)
+            {
+                m_HostButton.onClick.RemoveListener(OnHostClicked);
+                m_HostButton.onClick.AddListener(OnHostClicked);
+            }
+            if (m_JoinButton != null)
+            {
+                m_JoinButton.onClick.RemoveListener(OnJoinClicked);
+                m_JoinButton.onClick.AddListener(OnJoinClicked);
+            }
+            if (m_BackButton != null)
+            {
+                m_BackButton.onClick.RemoveListener(OnBackClicked);
+                m_BackButton.onClick.AddListener(OnBackClicked);
+            }
+
+            if (NetworkManagerBootstrap.Instance != null)
+            {
+                NetworkManagerBootstrap.Instance.OnStatusChanged -= UpdateStatus;
+                NetworkManagerBootstrap.Instance.OnStatusChanged += UpdateStatus;
+            }
+        }
+
+        private void DetachListeners()
         {
             if (m_HostButton != null) m_HostButton.onClick.RemoveListener(OnHostClicked);
             if (m_JoinButton != null) m_JoinButton.onClick.RemoveListener(OnJoinClicked);
@@ -112,7 +157,14 @@ namespace StarVanguard.Net
                 NetworkManagerBootstrap.Instance.DisconnectSession();
             }
 
-            gameObject.SetActive(false);
+            if (StarVanguard.UI.UIPanelRouter.Instance != null)
+            {
+                StarVanguard.UI.UIPanelRouter.Instance.Back();
+            }
+            else
+            {
+                gameObject.SetActive(false);
+            }
         }
 
         private void UpdateStatus(string message)
