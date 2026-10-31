@@ -103,10 +103,9 @@ namespace StarVanguard.UI
             joinRect.pivot = new Vector2(0.5f, 0.5f);
             joinRect.anchoredPosition = new Vector2(0f, -120f);
 
-            // Back Button
+            // Back Button (listener exclusively managed by CoopMenuPresenter to avoid double-Back calls)
             Button backBtn = UITheme.CreateButton(
-                cardRect, "Btn_Back", "QUAY LẠI (BACK)", 260f, UITheme.ButtonHeightSmall, false,
-                () => UIPanelRouter.Instance?.Back());
+                cardRect, "Btn_Back", "QUAY LẠI (BACK)", 260f, UITheme.ButtonHeightSmall, false, null);
             RectTransform backRect = backBtn.GetComponent<RectTransform>();
             backRect.anchorMin = new Vector2(0.5f, 0f);
             backRect.anchorMax = new Vector2(0.5f, 0f);

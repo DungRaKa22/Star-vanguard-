@@ -31,7 +31,7 @@ namespace StarVanguard.UI
 
             // Title
             TextMeshProUGUI title = UITheme.CreateText(
-                cardRect, "Title", "SYSTEM SETTINGS", UITheme.H1, UITheme.TextPrimary,
+                cardRect, "Title", "CÀI ĐẶT HỆ THỐNG / SETTINGS", UITheme.H1, UITheme.TextPrimary,
                 TextAlignmentOptions.Center, FontStyles.Bold);
             title.characterSpacing = 3f;
             title.rectTransform.anchorMin = new Vector2(0f, 1f);
@@ -43,7 +43,7 @@ namespace StarVanguard.UI
             // Left column: Audio
             float colY = -90f;
             TextMeshProUGUI audioHeader = UITheme.CreateText(
-                cardRect, "AudioHeader", "AUDIO CONTROLS", UITheme.Caption, UITheme.CyanDim,
+                cardRect, "AudioHeader", "ÂM THANH (AUDIO)", UITheme.Caption, UITheme.CyanDim,
                 TextAlignmentOptions.Left, FontStyles.Bold);
             audioHeader.characterSpacing = 2f;
             audioHeader.rectTransform.anchorMin = new Vector2(0f, 1f);
@@ -54,19 +54,19 @@ namespace StarVanguard.UI
 
             // Master Volume
             float itemY = colY - 36f;
-            (Slider masterSlider, TextMeshProUGUI masterPct) = AddVolumeRow(cardRect, "MasterVolume", "Master Volume", 60f, itemY, 1f);
+            (Slider masterSlider, TextMeshProUGUI masterPct) = AddVolumeRow(cardRect, "MasterVolume", "Âm Lượng Tổng (Master)", 60f, itemY, 1f);
 
             // Music Volume
             itemY -= 76f;
-            (Slider musicSlider, TextMeshProUGUI musicPct) = AddVolumeRow(cardRect, "MusicVolume", "Music Volume", 60f, itemY, 0.8f);
+            (Slider musicSlider, TextMeshProUGUI musicPct) = AddVolumeRow(cardRect, "MusicVolume", "Nhạc Nền (Music)", 60f, itemY, 0.8f);
 
             // SFX Volume
             itemY -= 76f;
-            (Slider sfxSlider, TextMeshProUGUI sfxPct) = AddVolumeRow(cardRect, "SFXVolume", "SFX Volume", 60f, itemY, 1f);
+            (Slider sfxSlider, TextMeshProUGUI sfxPct) = AddVolumeRow(cardRect, "SFXVolume", "Hiệu Ứng (SFX)", 60f, itemY, 1f);
 
             // Right column: Gameplay / Controls
             TextMeshProUGUI controlsHeader = UITheme.CreateText(
-                cardRect, "ControlsHeader", "INPUT & FLIGHT CONTROLS", UITheme.Caption, UITheme.CyanDim,
+                cardRect, "ControlsHeader", "ĐIỀU KHIỂN (CONTROLS)", UITheme.Caption, UITheme.CyanDim,
                 TextAlignmentOptions.Left, FontStyles.Bold);
             controlsHeader.characterSpacing = 2f;
             controlsHeader.rectTransform.anchorMin = new Vector2(0f, 1f);
@@ -76,17 +76,17 @@ namespace StarVanguard.UI
             controlsHeader.rectTransform.sizeDelta = new Vector2(400f, 24f);
 
             float toggleY = colY - 44f;
-            Toggle mouseToggle = AddToggleRow(cardRect, "MouseControlsToggle", "Use Mouse Controls", 520f, toggleY, false);
+            Toggle mouseToggle = AddToggleRow(cardRect, "MouseControlsToggle", "Điều Khiển Chuột (Mouse)", 520f, toggleY, false);
 
             toggleY -= 68f;
-            Toggle mouseSmoothToggle = AddToggleRow(cardRect, "MouseSmoothingToggle", "Mouse Smoothing", 520f, toggleY, true);
+            Toggle mouseSmoothToggle = AddToggleRow(cardRect, "MouseSmoothingToggle", "Mượt Chuột (Smoothing)", 520f, toggleY, true);
 
             toggleY -= 68f;
-            Toggle kbSmoothToggle = AddToggleRow(cardRect, "KeyboardSmoothingToggle", "Keyboard Smoothing", 520f, toggleY, true);
+            Toggle kbSmoothToggle = AddToggleRow(cardRect, "KeyboardSmoothingToggle", "Mượt Phím (Smoothing)", 520f, toggleY, true);
 
             // Bottom action buttons
             Button resetBtn = UITheme.CreateButton(
-                cardRect, "ResetToDefaultsButton", "RESET DEFAULTS", 260f, UITheme.ButtonHeightSmall, false, null);
+                cardRect, "ResetToDefaultsButton", "ĐẶT LẠI (RESET)", 260f, UITheme.ButtonHeightSmall, false, null);
             RectTransform resetRect = resetBtn.GetComponent<RectTransform>();
             resetRect.anchorMin = new Vector2(0.5f, 0f);
             resetRect.anchorMax = new Vector2(0.5f, 0f);
@@ -94,7 +94,7 @@ namespace StarVanguard.UI
             resetRect.anchoredPosition = new Vector2(-150f, 32f);
 
             Button backBtn = UITheme.CreateButton(
-                cardRect, "BackButton", "BACK", 260f, UITheme.ButtonHeightSmall, true,
+                cardRect, "BackButton", "QUAY LẠI (BACK)", 260f, UITheme.ButtonHeightSmall, true,
                 () => UIPanelRouter.Instance?.Back());
             RectTransform backRect = backBtn.GetComponent<RectTransform>();
             backRect.anchorMin = new Vector2(0.5f, 0f);

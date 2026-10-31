@@ -113,6 +113,12 @@ public class GameManager : Singleton<GameManager>
             }
             else if (GameState == eGameState.Paused)
             {
+                if (UIManager.Instance != null && UIManager.Instance.HasActiveSubPanel)
+                {
+                    UIManager.RequestHideSubPanels();
+                    return;
+                }
+
                 setGameState(eGameState.Playing);
             }
         }

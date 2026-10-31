@@ -112,7 +112,7 @@ namespace StarVanguard.Net
             }
             if (m_BackButton != null)
             {
-                m_BackButton.onClick.RemoveListener(OnBackClicked);
+                m_BackButton.onClick.RemoveAllListeners();
                 m_BackButton.onClick.AddListener(OnBackClicked);
             }
 
@@ -159,7 +159,10 @@ namespace StarVanguard.Net
 
             if (StarVanguard.UI.UIPanelRouter.Instance != null)
             {
-                StarVanguard.UI.UIPanelRouter.Instance.Back();
+                if (StarVanguard.UI.UIPanelRouter.Instance.Current == StarVanguard.UI.UIPanelId.Coop)
+                {
+                    StarVanguard.UI.UIPanelRouter.Instance.Back();
+                }
             }
             else
             {

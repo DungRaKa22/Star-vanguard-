@@ -46,6 +46,14 @@ public class UIManager : Singleton<UIManager>
     [SerializeField] private GameObject m_ControlsPanel;
     [SerializeField] private GameObject m_SettingsPanel;
 
+    public void SetPausePanel(GameObject i_Panel) => m_PausePanel = i_Panel;
+    public void SetSettingsPanel(GameObject i_Panel) => m_SettingsPanel = i_Panel;
+
+    public bool HasActiveSubPanel => (m_SettingsPanel != null && m_SettingsPanel.activeSelf) ||
+                                     (m_ControlsPanel != null && m_ControlsPanel.activeSelf);
+
+    public static void RequestHideSubPanels() => OnHideSubPanelsRequested?.Invoke();
+
     private void Start()
     {
         // Fix Canvas scale issue that can make UI invisible

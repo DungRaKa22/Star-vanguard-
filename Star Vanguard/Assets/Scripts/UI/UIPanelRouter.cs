@@ -112,12 +112,79 @@ namespace StarVanguard.UI
 
         private void DiscoverPanels()
         {
+            EnsureModernGameplayPanels();
+
             foreach ((UIPanelId id, string objectName) in k_ScenePanels)
             {
                 GameObject panel = FindInScene(objectName);
                 if (panel != null)
                 {
                     Register(id, panel);
+                }
+            }
+        }
+
+        private void EnsureModernGameplayPanels()
+        {
+            Canvas canvas = UnityEngine.Object.FindAnyObjectByType<Canvas>();
+            if (canvas == null) return;
+
+            // In MainMenuScene, MainMenuScreen builds and manages its own panels.
+            if (UnityEngine.Object.FindAnyObjectByType<MainMenuScreen>() != null) return;
+
+            // 1. Ensure modern PausePanel
+            GameObject existingPause = FindInScene("PausePanel");
+            bool pauseNeedsRebuild = existingPause == null || existingPause.transform.Find("Card") == null;
+            if (pauseNeedsRebuild)
+            {
+                if (existingPause != null)
+                {
+                    DestroyImmediate(existingPause);
+                }
+                GameObject pauseObj = PauseScreen.Build(canvas.transform);
+                pauseObj.SetActive(false);
+                if (UIManager.Instance != null)
+                {
+                    UIManager.Instance.SetPausePanel(pauseObj);
+                }
+            }
+
+            // 2. Ensure modern SettingsPanel
+            GameObject existingSettings = FindInScene("SettingsPanel");
+            bool settingsNeedsRebuild = existingSettings == null || existingSettings.transform.Find("Card") == null;
+            if (settingsNeedsRebuild)
+            {
+                if (existingSettings != null)
+                {
+                    DestroyImmediate(existingSettings);
+                }
+                GameObject settingsObj = SettingsScreen.Build(canvas.transform);
+                settingsObj.SetActive(false);
+                if (UIManager.Instance != null)
+                {
+                    UIManager.Instance.SetSettingsPanel(settingsObj);
+                }
+            }
+
+            // 3. Ensure GameOverPanel buttons are active if present
+            GameObject existingGameOver = FindInScene("GameOverPanel");
+            if (existingGameOver != null)
+            {
+                Transform btnContainer = existingGameOver.transform.Find("GameOverPanelButtons");
+                if (btnContainer != null && !btnContainer.gameObject.activeSelf)
+                {
+                    btnContainer.gameObject.SetActive(true);
+                }
+            }
+        }
+
+        private void Update()
+        {
+            if (Input.GetKeyDown(KeyCode.Escape) && UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != "MainMenuScene")
+            {
+                if (Current == UIPanelId.Settings || Current == UIPanelId.Controls)
+                {
+                    Back();
                 }
             }
         }
