@@ -1,11 +1,23 @@
 using UnityEngine;
 using UnityEngine.Serialization;
+using UnityEngine.Audio;
 
 public class AudioManager : Singleton<AudioManager>
 {
     [Header("Audio Sources")]
     [SerializeField] private AudioSource m_SFXAudioSource;
     [SerializeField] private AudioSource m_MusicAudioSource;
+
+    [Header("Audio Mixer Routing")]
+    [SerializeField] private AudioMixer m_AudioMixer;
+    [SerializeField] private AudioMixerGroup m_MasterGroup;
+    [SerializeField] private AudioMixerGroup m_MusicGroup;
+    [SerializeField] private AudioMixerGroup m_SFXGroup;
+
+    [Header("Audio Pooling Settings")]
+    [SerializeField] private int m_SFXPoolSize = 12;
+    private AudioSource[] m_SFXPool;
+    private int m_NextSFXIndex = 0;
     
     [Header("Sound Effects")]
     [SerializeField] private AudioClip m_Shoot;
@@ -60,10 +72,7 @@ public class AudioManager : Singleton<AudioManager>
     {
         base.OnDestroy(); // Clear the Singleton instance reference
 
-        if (GameManager.HasInstance)
-        {
-            GameManager.OnGameStateChanged -= OnGameStateChanged;
-        }
+        GameManager.OnGameStateChanged -= OnGameStateChanged;
     }
     
     private void Start()
@@ -76,7 +85,35 @@ public class AudioManager : Singleton<AudioManager>
         if (m_MusicAudioSource != null)
         {
             m_MusicAudioSource.loop = true;
+            if (m_MusicGroup != null)
+            {
+                m_MusicAudioSource.outputAudioMixerGroup = m_MusicGroup;
+            }
             m_MusicAudioSource.volume = DEFAULT_MUSIC_VOLUME * m_MusicVolume * m_MasterVolume;
+        }
+
+        // Initialize dedicated SFX pool to prevent pitch overrides and sound cutting
+        if (m_SFXPool == null || m_SFXPool.Length != m_SFXPoolSize)
+        {
+            m_SFXPool = new AudioSource[m_SFXPoolSize];
+            var poolObj = new GameObject("SFX_AudioPool");
+            poolObj.transform.SetParent(transform);
+
+            for (int i = 0; i < m_SFXPoolSize; i++)
+            {
+                var src = poolObj.AddComponent<AudioSource>();
+                src.playOnAwake = false;
+                src.loop = false;
+                if (m_SFXGroup != null)
+                {
+                    src.outputAudioMixerGroup = m_SFXGroup;
+                }
+                else if (m_SFXAudioSource != null)
+                {
+                    src.outputAudioMixerGroup = m_SFXAudioSource.outputAudioMixerGroup;
+                }
+                m_SFXPool[i] = src;
+            }
         }
     }
     
@@ -85,11 +122,43 @@ public class AudioManager : Singleton<AudioManager>
     public void Play(eSFXId i_SfxId, float i_Volume = 1f, float i_Pitch = 1f)
     {
         AudioClip clip = GetSFXClip(i_SfxId);
-        if (!clip || !m_SFXAudioSource) return;
+        if (!clip) return;
         
-        m_SFXAudioSource.pitch = i_Pitch;
         float finalVolume = i_Volume * DEFAULT_SFX_VOLUME * m_SFXVolume * m_MasterVolume;
-        m_SFXAudioSource.PlayOneShot(clip, finalVolume);
+        AudioSource source = GetAvailableSFXSource();
+        if (source != null)
+        {
+            source.pitch = i_Pitch;
+            source.volume = finalVolume;
+            source.clip = clip;
+            source.Play();
+        }
+        else if (m_SFXAudioSource != null)
+        {
+            m_SFXAudioSource.pitch = i_Pitch;
+            m_SFXAudioSource.PlayOneShot(clip, finalVolume);
+        }
+    }
+
+    private AudioSource GetAvailableSFXSource()
+    {
+        if (m_SFXPool == null || m_SFXPool.Length == 0) return m_SFXAudioSource;
+
+        // First pass: find an idle source
+        for (int i = 0; i < m_SFXPool.Length; i++)
+        {
+            int idx = (m_NextSFXIndex + i) % m_SFXPool.Length;
+            if (!m_SFXPool[idx].isPlaying)
+            {
+                m_NextSFXIndex = (idx + 1) % m_SFXPool.Length;
+                return m_SFXPool[idx];
+            }
+        }
+
+        // Second pass: round-robin steal oldest playing source
+        var stolen = m_SFXPool[m_NextSFXIndex];
+        m_NextSFXIndex = (m_NextSFXIndex + 1) % m_SFXPool.Length;
+        return stolen;
     }
     
     public void OnUIButtonClick()
@@ -383,6 +452,17 @@ public class AudioManager : Singleton<AudioManager>
         {
             m_SFXAudioSource.Stop();
             m_SFXAudioSource.clip = null;
+        }
+        if (m_SFXPool != null)
+        {
+            for (int i = 0; i < m_SFXPool.Length; i++)
+            {
+                if (m_SFXPool[i] != null)
+                {
+                    m_SFXPool[i].Stop();
+                    m_SFXPool[i].clip = null;
+                }
+            }
         }
     }
     

@@ -4,6 +4,18 @@ using UnityEngine.Serialization;
 public class BossController : MonoBehaviour, IDamageable
 {
     private static readonly int sr_Explode = Animator.StringToHash("Explode");
+    private static readonly System.Collections.Generic.List<BossController> s_ActiveBosses = new System.Collections.Generic.List<BossController>();
+    public static System.Collections.Generic.IReadOnlyList<BossController> ActiveBosses => s_ActiveBosses;
+
+    static BossController()
+    {
+        SingletonRegistry.Register(ResetStaticData);
+    }
+
+    private static void ResetStaticData()
+    {
+        s_ActiveBosses.Clear();
+    }
     [Header("Boss Settings")]
     [SerializeField] private int m_BaseMaxHp = 50; // Boss base HP
     [SerializeField] private int m_ScoreReward = 5000; // Points awarded for killing boss
@@ -29,7 +41,13 @@ public class BossController : MonoBehaviour, IDamageable
     
     private void OnEnable()
     {
+        if (!s_ActiveBosses.Contains(this)) s_ActiveBosses.Add(this);
         initializeBoss();
+    }
+
+    private void OnDisable()
+    {
+        s_ActiveBosses.Remove(this);
     }
     
     /// <summary>
@@ -123,6 +141,7 @@ public class BossController : MonoBehaviour, IDamageable
         // All effects happen at the exact moment the explosion animation starts
         AudioManager.Instance?.Play(eSFXId.Explosion, 0.4f, 0.5f); // Reduced from 0.7f
         AudioManager.Instance?.Play(eSFXId.BossHit, 0.5f, 0.6f);   // Reduced from 0.8f
+        StarVanguard.CameraShakeController.Shake(0.8f, 0.8f);
         GameManager.Instance?.AddScore(m_ScoreReward);
         dropEnergyCrystals();
         

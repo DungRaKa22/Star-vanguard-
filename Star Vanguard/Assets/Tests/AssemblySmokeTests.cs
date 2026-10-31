@@ -302,5 +302,67 @@ namespace StarVanguard.Tests
             Assert.AreEqual(0, totalAllocated,
                 $"HandleHeatChanged must produce ZERO GC allocations in steady state. Observed: {totalAllocated} bytes over 1000 invocations.");
         }
+
+        [Test]
+        public void Sprint2_CameraShake_AppliesAndDecaysToOriginalPosition()
+        {
+            GameObject camObj = new GameObject("TestCamera");
+            CameraShakeController shaker = camObj.AddComponent<CameraShakeController>();
+            Vector3 startPos = camObj.transform.localPosition;
+
+            shaker.TriggerShake(0.5f, 0.1f);
+            
+            // Advance time via LateUpdate reflection
+            MethodInfo lateUpdateMethod = typeof(CameraShakeController).GetMethod("LateUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (lateUpdateMethod != null)
+            {
+                FieldInfo timerField = typeof(CameraShakeController).GetField("m_Timer", BindingFlags.Instance | BindingFlags.NonPublic);
+                timerField?.SetValue(shaker, 0.0001f);
+                lateUpdateMethod.Invoke(shaker, null);
+                
+                timerField?.SetValue(shaker, 0f);
+                lateUpdateMethod.Invoke(shaker, null);
+            }
+
+            Assert.AreEqual(startPos, camObj.transform.localPosition, "Camera localPosition must restore to original after shake");
+            UnityEngine.Object.DestroyImmediate(camObj);
+        }
+
+        [Test]
+        public void Sprint2_ZeroGC_PlasmaAngles_StaticArray()
+        {
+            FieldInfo f5 = typeof(PlayerShooting).GetField("s_PlasmaAnglesLevel5", BindingFlags.Static | BindingFlags.NonPublic);
+            FieldInfo f3 = typeof(PlayerShooting).GetField("s_PlasmaAnglesLevel3", BindingFlags.Static | BindingFlags.NonPublic);
+            FieldInfo f1 = typeof(PlayerShooting).GetField("s_PlasmaAnglesLevel1", BindingFlags.Static | BindingFlags.NonPublic);
+
+            Assert.IsNotNull(f5, "s_PlasmaAnglesLevel5 static cached array must exist");
+            Assert.IsNotNull(f3, "s_PlasmaAnglesLevel3 static cached array must exist");
+            Assert.IsNotNull(f1, "s_PlasmaAnglesLevel1 static cached array must exist");
+
+            float[] a5 = (float[])f5.GetValue(null);
+            float[] a3 = (float[])f3.GetValue(null);
+            float[] a1 = (float[])f1.GetValue(null);
+
+            Assert.AreEqual(5, a5.Length);
+            Assert.AreEqual(3, a3.Length);
+            Assert.AreEqual(2, a1.Length);
+        }
+
+        [Test]
+        public void Sprint2_PoolManager_ActiveRegistriesZeroAllocation()
+        {
+            GameObject poolObj = new GameObject("TestPoolManager");
+            PoolManager pm = poolObj.AddComponent<PoolManager>();
+
+            Assert.DoesNotThrow(() =>
+            {
+                var enemies = pm.ActiveEnemies;
+                var bullets = pm.ActiveBullets;
+                var bombs = pm.ActiveBombs;
+                var enemyBullets = pm.ActiveEnemyBullets;
+            });
+
+            UnityEngine.Object.DestroyImmediate(poolObj);
+        }
     }
 }

@@ -43,28 +43,47 @@ public class Bomb : MonoBehaviour, IPoolable
     {
         m_IsExploding = true;
         
-        // Damage all enemies on screen
-        foreach(var enemy in FindObjectsByType<EnemyController>())
+        // Damage all enemies on screen via active pool registry (Zero-GC)
+        if (PoolManager.HasInstance && PoolManager.Instance.ActiveEnemies != null)
         {
-            if(enemy) enemy.TakeDamage(m_BombDamage);
+            var activeEnemies = PoolManager.Instance.ActiveEnemies;
+            for (int i = activeEnemies.Count - 1; i >= 0; i--)
+            {
+                var enemy = activeEnemies[i];
+                if (enemy != null && enemy.gameObject.activeInHierarchy)
+                {
+                    enemy.TakeDamage(m_BombDamage);
+                }
+            }
         }
         
-        // Damage all bosses on screen
-        foreach(var boss in FindObjectsByType<BossController>())
+        // Damage all bosses on screen via active boss registry
+        var activeBosses = BossController.ActiveBosses;
+        for (int i = activeBosses.Count - 1; i >= 0; i--)
         {
-            if(boss && boss.IsActive) boss.TakeDamage(m_BombDamage);
+            var boss = activeBosses[i];
+            if (boss != null && boss.IsActive)
+            {
+                boss.TakeDamage(m_BombDamage);
+            }
         }
         
         // Clear all enemy bullets (plasma) from the screen
-        foreach(var enemyBullet in FindObjectsByType<EnemyBullet>())
+        if (PoolManager.HasInstance && PoolManager.Instance.ActiveEnemyBullets != null)
         {
-            if(enemyBullet && enemyBullet.gameObject.activeInHierarchy)
+            var activeBullets = PoolManager.Instance.ActiveEnemyBullets;
+            for (int i = activeBullets.Count - 1; i >= 0; i--)
             {
-                PoolManager.Instance?.ReturnEnemyBullet(enemyBullet);
+                var enemyBullet = activeBullets[i];
+                if (enemyBullet != null && enemyBullet.gameObject.activeInHierarchy)
+                {
+                    PoolManager.Instance.ReturnEnemyBullet(enemyBullet);
+                }
             }
         }
         
         AudioManager.Instance?.Play(eSFXId.Explosion);
+        StarVanguard.CameraShakeController.Shake(0.6f, 0.45f);
         m_Animator.SetTrigger(sr_Explode);
         
         // Wait for explosion animation to complete before returning to pool

@@ -58,8 +58,8 @@ public class ParallaxLayer : MonoBehaviour
 
     private void Update()
     {
-        // Camera.main can be destroyed by a scene load while this layer survives
-        if (m_Camera == null) m_Camera = Camera.main;
+        // Camera can be destroyed by a scene load while this layer survives
+        if (m_Camera == null) EnsureCamera();
         if (m_Camera == null) return;
 
         float dy = -m_CurrentSpeed * Time.deltaTime;
@@ -114,4 +114,8 @@ public class ParallaxLayer : MonoBehaviour
     /// Get the base (original) speed of this layer
     /// </summary>
     public float GetBaseSpeed() => m_BaseSpeed;
+    private void EnsureCamera()
+    {
+        if (m_Camera == null) m_Camera = Camera.main;
+    }
 }

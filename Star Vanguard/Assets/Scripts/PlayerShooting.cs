@@ -16,6 +16,11 @@ public class PlayerShooting : MonoBehaviour
     public static event System.Action<Vector2, float, float, float, int, int, Color, Vector3> OnCustomBulletFired;
     public static event System.Action OnShotFiredRhythm;
 
+    // Zero-GC static angle arrays for Plasma weapon
+    private static readonly float[] s_PlasmaAnglesLevel5 = new float[] { -28f, -14f, 0f, 14f, 28f };
+    private static readonly float[] s_PlasmaAnglesLevel3 = new float[] { -18f, 0f, 18f };
+    private static readonly float[] s_PlasmaAnglesLevel1 = new float[] { -10f, 10f };
+
     [Header("Components")]
     [SerializeField] private PlayerStats m_PlayerStats;
     [SerializeField] private Transform m_Muzzle;
@@ -200,8 +205,8 @@ public class PlayerShooting : MonoBehaviour
         int damage = 2;
 
         float[] angles = (level >= 5) 
-            ? new float[] { -28f, -14f, 0f, 14f, 28f } 
-            : ((level >= 3) ? new float[] { -18f, 0f, 18f } : new float[] { -10f, 10f });
+            ? s_PlasmaAnglesLevel5 
+            : ((level >= 3) ? s_PlasmaAnglesLevel3 : s_PlasmaAnglesLevel1);
 
         for (int i = 0; i < angles.Length; i++)
         {

@@ -42,6 +42,7 @@ public class PlayerHitBox : MonoBehaviour
     {
         GameManager.Instance?.DamagePlayer(1);                          // 1. Take damage
         AudioManager.Instance?.Play(eSFXId.Explosion, 0.8f);            // 2. Play explosion sound
+        StarVanguard.CameraShakeController.Shake(0.35f, 0.25f);
         m_PlayerStats.ActivateShield();                                         // 3. Activate shield
         m_PlayerStats.AddWeaponLevel(m_PlayerStats.WeaponLevel / 2 * -1); // 4. Cut weapon level in half
         

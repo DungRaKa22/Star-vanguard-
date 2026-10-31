@@ -382,6 +382,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_SFXAudioSource: {fileID: 1941854441}
   m_MusicAudioSource: {fileID: 1941854443}
+  m_AudioMixer: {fileID: 24100000, guid: 86ef531f27189af468882295c430e35e, type: 2}
+  m_MasterGroup: {fileID: 24300002, guid: 86ef531f27189af468882295c430e35e, type: 2}
+  m_MusicGroup: {fileID: 3011529773499964026, guid: 86ef531f27189af468882295c430e35e, type: 2}
+  m_SFXGroup: {fileID: -8657746332840850044, guid: 86ef531f27189af468882295c430e35e, type: 2}
+  m_SFXPoolSize: 12
   m_Shoot: {fileID: 8300000, guid: 1a5ff21cb3d500b4fbc00e4f62de0263, type: 3}
   m_EnemyHit: {fileID: 8300000, guid: ca92347b358d70247a86102dfb00dff8, type: 3}
   m_PlayerHit: {fileID: 8300000, guid: 7c635dcfcd6621e46a9a7589e6a7c788, type: 3}

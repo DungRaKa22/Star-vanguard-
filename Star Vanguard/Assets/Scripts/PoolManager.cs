@@ -138,6 +138,13 @@ public class PoolManager : Singleton<PoolManager>
     {
         m_EnemyBulletPool.Return(i_EnemyBullet);
     }
+
+    // Active object registries (Zero-GC queries for gameplay and bombs)
+    public System.Collections.Generic.IReadOnlyList<EnemyController> ActiveEnemies => m_EnemyPool != null ? m_EnemyPool.ActiveObjects : null;
+    public System.Collections.Generic.IReadOnlyList<EnemyBullet> ActiveEnemyBullets => m_EnemyBulletPool != null ? m_EnemyBulletPool.ActiveObjects : null;
+    public System.Collections.Generic.IReadOnlyList<Bullet> ActiveBullets => m_BulletPool != null ? m_BulletPool.ActiveObjects : null;
+    public System.Collections.Generic.IReadOnlyList<Bomb> ActiveBombs => m_BombPool != null ? m_BombPool.ActiveObjects : null;
+    public System.Collections.Generic.IReadOnlyList<EnergyCrystal> ActiveCrystals => m_CrystalPool != null ? m_CrystalPool.ActiveObjects : null;
     
     public HUDIcon GetHUDIcon(Vector3 i_Position)
     {
@@ -214,73 +221,31 @@ public class PoolManager : Singleton<PoolManager>
 
     private void resetBombPool()
     {
-        var activeBombs = FindObjectsByType<Bomb>();
-        foreach (var bomb in activeBombs)
-        {
-            if (bomb.gameObject.activeInHierarchy)
-            {
-                ReturnBomb(bomb);
-            }
-        }
+        m_BombPool?.ReturnAllActive();
     }
 
     private void resetBulletPool()
     {
-        var activeBullets = FindObjectsByType<Bullet>();
-        foreach (var bullet in activeBullets)
-        {
-            if (bullet.gameObject.activeInHierarchy)
-            {
-                ReturnBullet(bullet);
-            }
-        }
+        m_BulletPool?.ReturnAllActive();
     }
 
     private void resetFoodPool()
     {
-        var activeCrystals = FindObjectsByType<EnergyCrystal>();
-        foreach (var crystal in activeCrystals)
-        {
-            if (crystal.gameObject.activeInHierarchy)
-            {
-                ReturnCrystal(crystal);
-            }
-        }
+        m_CrystalPool?.ReturnAllActive();
     }
 
     private void resetEnemyPool()
     {
-        var activeEnemies = FindObjectsByType<EnemyController>();
-        foreach (var enemy in activeEnemies)
-        {
-            if (enemy.gameObject.activeInHierarchy)
-            {
-                ReturnEnemy(enemy);
-            }
-        }
+        m_EnemyPool?.ReturnAllActive();
     }
 
     private void resetEnemyBulletPool()
     {
-        var activeEnemyBullets = FindObjectsByType<EnemyBullet>();
-        foreach (var enemyBullet in activeEnemyBullets)
-        {
-            if (enemyBullet.gameObject.activeInHierarchy)
-            {
-                ReturnEnemyBullet(enemyBullet);
-            }
-        }
+        m_EnemyBulletPool?.ReturnAllActive();
     }
     
     private void resetHUDIconPool()
     {
-        var activeHUDIcons = FindObjectsByType<HUDIcon>();
-        foreach (var hudIcon in activeHUDIcons)
-        {
-            if (hudIcon.gameObject.activeInHierarchy)
-            {
-                ReturnHUDIcon(hudIcon);
-            }
-        }
+        m_HUDIconPool?.ReturnAllActive();
     }
 }

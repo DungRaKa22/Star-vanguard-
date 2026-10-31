@@ -29,7 +29,7 @@ public class CanvasAspectFitter : MonoBehaviour
 
     private void Update()
     {
-        if (m_Camera == null) m_Camera = Camera.main;
+        if (m_Camera == null) EnsureCamera();
         if (m_Camera == null) return;
 
         if (Screen.width != m_LastWidth || Screen.height != m_LastHeight || m_Camera.rect != m_LastCamRect)
@@ -38,10 +38,15 @@ public class CanvasAspectFitter : MonoBehaviour
         }
     }
 
+    private void EnsureCamera()
+    {
+        if (m_Camera == null) m_Camera = Camera.main;
+    }
+
     public void ApplyFit()
     {
         if (m_RectTransform == null) m_RectTransform = GetComponent<RectTransform>();
-        if (m_Camera == null) m_Camera = Camera.main;
+        EnsureCamera();
         if (m_RectTransform == null) return;
 
         Rect camRect = m_Camera != null ? m_Camera.rect : new Rect(0f, 0f, 1f, 1f);

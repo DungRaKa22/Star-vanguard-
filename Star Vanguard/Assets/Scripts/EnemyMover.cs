@@ -89,7 +89,7 @@ public class EnemyMover : MonoBehaviour
     private void Update()
     {
         // Enemies come from a pool that may have been created in a previous scene
-        if (m_Camera == null) m_Camera = Camera.main;
+        if (m_Camera == null) EnsureCamera();
 
         switch(m_MoveType)
         {
@@ -209,5 +209,9 @@ public class EnemyMover : MonoBehaviour
                 PoolManager.Instance?.ReturnEnemy(enemyController);
             }
         }
+    }
+    private void EnsureCamera()
+    {
+        if (m_Camera == null) m_Camera = Camera.main;
     }
 }
