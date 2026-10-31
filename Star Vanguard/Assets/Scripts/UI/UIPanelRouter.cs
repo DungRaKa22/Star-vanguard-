@@ -166,14 +166,26 @@ namespace StarVanguard.UI
                 }
             }
 
-            // 3. Ensure GameOverPanel buttons are active if present
+            // 3. Ensure modern GameOverPanel
             GameObject existingGameOver = FindInScene("GameOverPanel");
-            if (existingGameOver != null)
+            bool gameOverNeedsRebuild = existingGameOver == null || existingGameOver.transform.Find("Card") == null;
+            if (gameOverNeedsRebuild)
             {
-                Transform btnContainer = existingGameOver.transform.Find("GameOverPanelButtons");
-                if (btnContainer != null && !btnContainer.gameObject.activeSelf)
+                if (existingGameOver != null)
                 {
-                    btnContainer.gameObject.SetActive(true);
+                    DestroyImmediate(existingGameOver);
+                }
+                GameObject legacyNewHighScore = FindInScene("NewHighScorePanel");
+                if (legacyNewHighScore != null && legacyNewHighScore.transform.parent == canvas.transform)
+                {
+                    DestroyImmediate(legacyNewHighScore);
+                }
+
+                GameObject gameOverObj = GameOverScreen.Build(canvas.transform);
+                gameOverObj.SetActive(false);
+                if (UIManager.Instance != null)
+                {
+                    UIManager.Instance.SetGameOverPanel(gameOverObj);
                 }
             }
         }

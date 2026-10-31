@@ -46,6 +46,7 @@ public class UIManager : Singleton<UIManager>
     [SerializeField] private GameObject m_ControlsPanel;
     [SerializeField] private GameObject m_SettingsPanel;
 
+    public void SetGameOverPanel(GameObject i_Panel) => m_GameOverPanel = i_Panel;
     public void SetPausePanel(GameObject i_Panel) => m_PausePanel = i_Panel;
     public void SetSettingsPanel(GameObject i_Panel) => m_SettingsPanel = i_Panel;
 

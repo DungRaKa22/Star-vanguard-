@@ -16,6 +16,32 @@ public class GameOverController : MonoBehaviour
     [SerializeField] private float m_ButtonDelayDuration = 1f; // Delay duration
     [SerializeField] private Button m_RestartButton;
     [SerializeField] private Button m_QuitButton;
+
+    public void Configure(
+        TextMeshProUGUI i_FinalScoreText,
+        LeaderboardUI i_LeaderboardUI,
+        Button i_RestartButton,
+        Button i_QuitButton,
+        float i_ButtonDelay = 0.5f)
+    {
+        m_FinalScoreText = i_FinalScoreText;
+        m_LeaderboardUI = i_LeaderboardUI;
+        m_RestartButton = i_RestartButton;
+        m_QuitButton = i_QuitButton;
+        m_ButtonDelayDuration = i_ButtonDelay;
+
+        if (m_RestartButton != null)
+        {
+            m_RestartButton.onClick.RemoveListener(Restart);
+            m_RestartButton.onClick.AddListener(Restart);
+        }
+
+        if (m_QuitButton != null)
+        {
+            m_QuitButton.onClick.RemoveListener(QuitToMenu);
+            m_QuitButton.onClick.AddListener(QuitToMenu);
+        }
+    }
     
     private void OnEnable()
     {
@@ -31,13 +57,13 @@ public class GameOverController : MonoBehaviour
 
     private IEnumerator delayButtonFunctionality()
     {
-        m_QuitButton.interactable = false;
-        m_RestartButton.interactable = false;
+        if (m_QuitButton) m_QuitButton.interactable = false;
+        if (m_RestartButton) m_RestartButton.interactable = false;
         
         yield return new WaitForSeconds(m_ButtonDelayDuration);
         
-        m_QuitButton.interactable = true;
-        m_RestartButton.interactable = true;
+        if (m_QuitButton) m_QuitButton.interactable = true;
+        if (m_RestartButton) m_RestartButton.interactable = true;
     }
 
     private void OnDisable()

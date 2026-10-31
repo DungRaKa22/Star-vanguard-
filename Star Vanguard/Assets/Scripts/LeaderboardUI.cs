@@ -22,6 +22,37 @@ public class LeaderboardUI : MonoBehaviour
     
     private List<GameObject> m_LeaderboardEntryObjects = new List<GameObject>();
     private int m_PendingScore = 0;
+
+    public void Configure(
+        GameObject i_LeaderboardContent,
+        Transform i_LeaderboardContainer,
+        GameObject i_LeaderboardEntryPrefab,
+        TextMeshProUGUI i_NoScoresText,
+        GameObject i_NewHighScorePanel,
+        TMP_InputField i_PlayerNameInput,
+        Button i_SubmitScoreButton,
+        TextMeshProUGUI i_NewScoreText)
+    {
+        m_LeaderboardContent = i_LeaderboardContent;
+        m_LeaderboardContainer = i_LeaderboardContainer;
+        m_LeaderboardEntryPrefab = i_LeaderboardEntryPrefab;
+        m_NoScoresText = i_NoScoresText;
+        m_NewHighScorePanel = i_NewHighScorePanel;
+        m_PlayerNameInput = i_PlayerNameInput;
+        m_SubmitScoreButton = i_SubmitScoreButton;
+        m_NewScoreText = i_NewScoreText;
+
+        if (m_SubmitScoreButton != null)
+        {
+            m_SubmitScoreButton.onClick.RemoveListener(submitScore);
+            m_SubmitScoreButton.onClick.AddListener(submitScore);
+        }
+
+        if (m_PlayerNameInput != null)
+        {
+            m_PlayerNameInput.characterLimit = 20;
+        }
+    }
     
     private void Start()
     {
@@ -202,9 +233,17 @@ public class LeaderboardUI : MonoBehaviour
     /// </summary>
     private void createLeaderboardEntry(int i_Rank, LeaderboardManager.LeaderboardEntry i_Entry)
     {
-        if (m_LeaderboardEntryPrefab == null || m_LeaderboardContainer == null) return;
+        if (m_LeaderboardContainer == null) return;
         
-        GameObject entryObject = Instantiate(m_LeaderboardEntryPrefab, m_LeaderboardContainer);
+        GameObject entryObject;
+        if (m_LeaderboardEntryPrefab != null)
+        {
+            entryObject = Instantiate(m_LeaderboardEntryPrefab, m_LeaderboardContainer);
+        }
+        else
+        {
+            entryObject = CreateDefaultEntry(m_LeaderboardContainer);
+        }
         m_LeaderboardEntryObjects.Add(entryObject);
         
         // Find and set text components
@@ -235,6 +274,46 @@ public class LeaderboardUI : MonoBehaviour
     /// <summary>
     /// Clear all leaderboard entry objects
     /// </summary>
+    private GameObject CreateDefaultEntry(Transform i_Parent)
+    {
+        GameObject row = new GameObject("LeaderboardEntry", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+        row.transform.SetParent(i_Parent, false);
+        RectTransform rt = row.GetComponent<RectTransform>();
+        rt.sizeDelta = new Vector2(700f, 32f);
+
+        HorizontalLayoutGroup layout = row.GetComponent<HorizontalLayoutGroup>();
+        layout.spacing = 10f;
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.childControlWidth = false;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
+
+        CreateEntryText(row.transform, "RankText", 45f, TextAlignmentOptions.Left);
+        CreateEntryText(row.transform, "NameText", 280f, TextAlignmentOptions.Left);
+        CreateEntryText(row.transform, "ScoreText", 200f, TextAlignmentOptions.Right);
+        CreateEntryText(row.transform, "DateText", 140f, TextAlignmentOptions.Right);
+
+        return row;
+    }
+
+    private TextMeshProUGUI CreateEntryText(Transform i_Parent, string i_Name, float i_Width, TextAlignmentOptions i_Align)
+    {
+        GameObject go = new GameObject(i_Name, typeof(RectTransform), typeof(TextMeshProUGUI));
+        go.transform.SetParent(i_Parent, false);
+        RectTransform rt = go.GetComponent<RectTransform>();
+        rt.sizeDelta = new Vector2(i_Width, 28f);
+
+        LayoutElement le = go.AddComponent<LayoutElement>();
+        le.preferredWidth = i_Width;
+
+        TextMeshProUGUI tmp = go.GetComponent<TextMeshProUGUI>();
+        tmp.fontSize = 20;
+        tmp.alignment = i_Align;
+        tmp.color = Color.white;
+        return tmp;
+    }
+
     private void clearLeaderboardEntries()
     {
         foreach (var entry in m_LeaderboardEntryObjects)
