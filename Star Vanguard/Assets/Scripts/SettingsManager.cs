@@ -20,6 +20,10 @@ public class SettingsManager : Singleton<SettingsManager>
     [SerializeField] private float m_DefaultMasterVolume = 1.0f;
     [SerializeField] private float m_DefaultSFXVolume = 1.0f;
     [SerializeField] private float m_DefaultMusicVolume = 0.8f;
+
+    [Header("Performance Policy")]
+    [SerializeField] private int m_TargetFrameRate = 60;
+    [SerializeField] private int m_VSyncCount = 1;
     
     // Current settings (cached for performance)
     private bool m_UseMouseControls;
@@ -71,6 +75,10 @@ public class SettingsManager : Singleton<SettingsManager>
     /// </summary>
     public void ApplySettings()
     {
+        // Enforce stable frame rate cap and vSync to avoid GPU burn and erratic frame times
+        Application.targetFrameRate = m_TargetFrameRate;
+        QualitySettings.vSyncCount = m_VSyncCount;
+
         // Apply control settings to player controller (only if one already exists)
         if (PlayerController.HasInstance)
         {

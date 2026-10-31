@@ -48,11 +48,15 @@ public class GameManager : Singleton<GameManager>
         base.Awake(); // Call singleton Awake first
         if (this == Instance) // Only initialize if we're the active instance
         {
-            // Force resolution before anything else initializes
-            if (m_ForceResolution)
+            // Initialize target frame rate and performance policy
+            if (SettingsManager.HasInstance)
             {
-                Screen.fullScreenMode = FullScreenMode.Windowed;
-                Screen.SetResolution(m_TargetWidth, m_TargetHeight, true);
+                SettingsManager.Instance.ApplySettings();
+            }
+            else
+            {
+                Application.targetFrameRate = 60;
+                QualitySettings.vSyncCount = 1;
             }
             
             initializeGame();
@@ -92,13 +96,6 @@ public class GameManager : Singleton<GameManager>
     
     private void Start()
     {
-        // Apply resolution again in Start to ensure it takes effect
-        if (m_ForceResolution && this == Instance)
-        {
-            Screen.fullScreenMode = FullScreenMode.Windowed;
-            Screen.SetResolution(m_TargetWidth, m_TargetHeight, false);
-        }
-
         // Fallback for the very first scene load (sceneLoaded can fire before Awake)
         if (SceneManager.GetActiveScene().name == "GameplayScene" && GameState != eGameState.Playing)
         {

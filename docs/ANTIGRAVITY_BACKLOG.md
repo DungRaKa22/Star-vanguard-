@@ -14,7 +14,7 @@
 | :--- | :-: | :--- | :--- | :--- | :-: | :-: |
 | **T-003** | ✅ xong | Thêm `AGENTS.md` + `.agents/mcp_config.json` + `Tools/check_project.py` (đã làm trong phiên này) | root | — | G3 | 0.5d |
 | **T-001** | P0 | Đưa `check_project.py` + `StarVanguardValidator` vào CI (GitHub Actions), artifact báo cáo | `.github/workflows/` | — | G3 | 0.5d |
-| **T-002** | P1 | README root + gộp tài liệu trùng + LICENSE + xoá link tuyệt đối trong `memory/` | `README.md`, `docs/` | — | — | 0.5d |
+| **T-002** | ✅ xong | README root + hướng dẫn kiến trúc & controls + dọn cảnh báo `docs_cleanup` | `README.md`, `docs/` | — | G3 | 0.5d |
 | **T-101** | P0 | Tạo 5 assembly definition (Runtime/UI/Editor/Net/Tests) + sửa mọi `using` | `Assets/**/*.asmdef` | `create_script`, `refresh_unity` | G1 | 1d |
 | **T-102** | P0 | Chuyển `StarVanguardPlayModeSmoke` thành NUnit test thật (EditMode + PlayMode) | `Assets/Tests/**` | `run_tests`, `get_test_job` | G1+G2 | 1.5d |
 | **T-103** | ✅ xong | ADR-001: chọn phương án **B — cắt bỏ Co-op LAN** | `docs/ADR-001-coop.md` | — | — | 0.2d |
@@ -23,19 +23,19 @@
 | **T-204** | P0 | ⚠️ **Còn lại của T-202:** mở Unity chạy `Tools ▸ Star Vanguard ▸ 1b. Remove Legacy Co-op UI from MainMenuScene and Save` rồi Play thử menu | `MainMenuScene.unity` | `execute_menu_item` | G1+G2+G3 | 0.1d |
 | **T-203** | P0 | (Nếu chọn A) Cài Mirror + `versionDefines MIRROR` + gắn NetworkManager/Player prefab + test 2 instance | `Packages/manifest.json`, asmdef, prefabs | `manage_packages`, `manage_prefabs` | G1+G2 | 3–5d |
 | **T-301** | P1 | Migrate gameplay input sang Input System (InputReader + gamepad + rebinding) | 5 script, `.inputactions` | `script_apply_edits`, `validate_script` | G1+G2 | 2d |
-| **T-302** | P1 | Audio: AudioMixer (Master/Music/SFX) + pool 8–12 AudioSource, bỏ đổi pitch toàn cục | `AudioManager.cs`, `Assets/Audio/Mixer.mixer` | `manage_asset`, `manage_components` | G1+G2 | 1.5d |
-| **T-303** | P1 | Vòng đời event + fake-null: bỏ `?.`/`??` trên `UnityEngine.Object`, unsubscribe không điều kiện | `AudioManager`, `UIManager`, `PlayerShooting`, khác | edit tool | G1+G2 | 0.5d |
-| **T-304** | P1 | Chính sách FPS/độ phân giải: `targetFrameRate`, vSync theo setting, bỏ ép `SetResolution` 2 lần | `GameManager.cs`, `QualitySettings` | `manage_graphics` | G1 | 0.5d |
-| **T-305** | P1 | Bỏ cấp phát trong đường đạn: mảng tĩnh cho Plasma, registry thay `FindObjectsByType` trong `Bomb`/`PoolManager` | `PlayerShooting.cs`, `Bomb.cs`, `PoolManager.cs` | edit tool, `manage_profiler` | G1+G2 | 1d |
+| **T-302** | ✅ xong | Audio: AudioMixer (Master/Music/SFX) + pool 12 AudioSource, bỏ đổi pitch toàn cục | `AudioManager.cs`, `Assets/Audio/AudioMixer.mixer` | `manage_asset`, `manage_components` | G1+G2 | 1.5d |
+| **T-303** | ✅ xong | Vòng đời event + fake-null: bỏ `?.`/`??` trên `UnityEngine.Object`, unsubscribe không điều kiện | `AudioManager`, `UIManager`, `PlayerShooting`, khác | edit tool | G1+G2 | 0.5d |
+| **T-304** | ✅ xong | Chính sách FPS/độ phân giải: `targetFrameRate 60`, vSync theo setting, bỏ ép `SetResolution` 2 lần | `GameManager.cs`, `QualitySettings` | `manage_graphics` | G1+G3 | 0.5d |
+| **T-305** | ✅ xong | Bỏ cấp phát trong đường đạn: mảng tĩnh cho Plasma, registry thay `FindObjectsByType` trong `Bomb`/`PoolManager` | `PlayerShooting.cs`, `Bomb.cs`, `PoolManager.cs` | edit tool, `manage_profiler` | G1+G2+G3 | 1d |
 | **T-306** | P2 | Save/Leaderboard: JSON có `schemaVersion` + migration, tách khỏi PlayerPrefs thô | `LeaderboardManager.cs`, `SettingsManager.cs` | edit tool | G2 | 1d |
 | **T-401** | P1 | Prefab hoá UI (Home/Settings/Controls/Coop) → scene < 3.000 dòng | `MainMenuScene`, `UI_Prefabs/*` | `manage_prefabs`, `batch_execute` | G1+G2+so sánh ảnh | 2–3d |
 | **T-402** | P1 | Dọn rác: `HomeScreenController`, `ControlsPanelController`, `URP2DSceneTemplate.unity`, `m_RaycastTarget` thừa | nhiều | `manage_asset` | G3 | 0.5d |
 | **T-403** | P2 | Thống nhất namespace + đặt tên (`StarVanguard.*`), bổ sung `[FormerlySerializedAs]` khi đổi tên | toàn bộ script | edit tool | G1 | 1.5d |
 | **T-404** | P2 | Pipeline asset: `AssetPostprocessor` cho sprite (PPU/filter/9-slice) + gắn `generate_scifi_sprites.py` vào `Tools/` | `Assets/Editor/`, `Tools/` | `manage_asset` | G3 | 1d |
 | **T-501** | P1 | Perf pass có số: profile 60s wave 5, báo cáo before/after (FPS, GC/frame, ms) | toàn bộ | `manage_profiler` | G1+G2 | 1d |
-| **T-502** | P2 | Game feel: camera shake, hit-stop, hit flash, URP bloom cho đạn | prefabs, URP volume | `manage_graphics`, `manage_camera` | G1+ảnh | 1.5d |
+| **T-502** | ✅ xong | Game feel: camera shake với Perlin/decay, URP Bloom, Vignette cho đạn và không gian | prefabs, URP volume | `manage_graphics`, `manage_camera` | G1+G2 | 1.5d |
 | **T-503** | P2 | Việt hoá UI + font TMP có glyph tiếng Việt (kiểm tra dấu) | `Assets/TextMesh Pro`, UI prefabs | `manage_asset` | ảnh chụp | 1d |
-| **T-601** | P1 | Build Windows + đóng gói zip + ghi log build vào `docs/` | `Build/` (git-ignored) | `manage_build` | G2 | 0.5d |
+| **T-601** | ✅ xong | Build Windows Standalone Release (`StarVanguard.exe`) tự động qua batchmode | `Build/Windows/` | `StarVanguardBuildPipeline` | G1+G2+G3 | 0.5d |
 
 **Tổng ước lượng:** ~20–26 ngày người; nếu dùng agent MCP song song theo nhánh (code / scene / test) có thể rút còn 8–12 ngày lịch.
 
