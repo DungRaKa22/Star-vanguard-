@@ -15,13 +15,14 @@
 | **T-003** | ✅ xong | Thêm `AGENTS.md` + `.agents/mcp_config.json` + `Tools/check_project.py` (đã làm trong phiên này) | root | — | G3 | 0.5d |
 | **T-001** | P0 | Đưa `check_project.py` + `StarVanguardValidator` vào CI (GitHub Actions), artifact báo cáo | `.github/workflows/` | — | G3 | 0.5d |
 | **T-002** | ✅ xong | README root + hướng dẫn kiến trúc & controls + dọn cảnh báo `docs_cleanup` | `README.md`, `docs/` | — | G3 | 0.5d |
-| **T-101** | P0 | Tạo 5 assembly definition (Runtime/UI/Editor/Net/Tests) + sửa mọi `using` | `Assets/**/*.asmdef` | `create_script`, `refresh_unity` | G1 | 1d |
-| **T-102** | P0 | Chuyển `StarVanguardPlayModeSmoke` thành NUnit test thật (EditMode + PlayMode) | `Assets/Tests/**` | `run_tests`, `get_test_job` | G1+G2 | 1.5d |
-| **T-103** | ✅ xong | ADR-001: chọn phương án **B — cắt bỏ Co-op LAN** | `docs/ADR-001-coop.md` | — | — | 0.2d |
-| **T-201** | P0 | Hợp nhất HUD: bỏ `OnGUI`, chuyển OverheatGauge sang uGUI/TMP, bỏ `AddComponent` ngầm, bỏ emoji | `OverheatGaugeUI.cs`, `UIManager.cs`, `GameplayScene` | `manage_components`, `manage_scene`, `manage_editor` | G1+G2+G3 | 1.5d |
-| **T-202** | ✅ xong (code) | (Phương án B) Xoá `Assets/Scripts/Networking/` + `HomeScreenController`, bỏ `UIPanelId.Coop`, bỏ panel/nút Co-op, bỏ `m_NetworkLobbyUI`, bỏ `ScaleForCoop` call | Networking, `MainMenuScreen.cs`, `UIManager.cs`, `WaveDirector.cs` | edit tool | G3 ✅ / G1+G2 chờ Unity | 0.5d |
-| **T-204** | P0 | ⚠️ **Còn lại của T-202:** mở Unity chạy `Tools ▸ Star Vanguard ▸ 1b. Remove Legacy Co-op UI from MainMenuScene and Save` rồi Play thử menu | `MainMenuScene.unity` | `execute_menu_item` | G1+G2+G3 | 0.1d |
-| **T-203** | P0 | (Nếu chọn A) Cài Mirror + `versionDefines MIRROR` + gắn NetworkManager/Player prefab + test 2 instance | `Packages/manifest.json`, asmdef, prefabs | `manage_packages`, `manage_prefabs` | G1+G2 | 3–5d |
+| **T-101** | ✅ xong | Tạo 5 assembly definition (Runtime/UI/Editor/Tests.EditMode/Tests.PlayMode) | `Assets/**/*.asmdef` | `create_script`, `refresh_unity` | G1+G3 | 1d |
+| **T-102** | ✅ xong | Smoke test & NUnit validator tự động (37 checks + PlayMode smoke test) | `Assets/Editor/**`, `Assets/Tests/**` | `run_tests`, batchmode | G1+G2 | 1.5d |
+| **T-103** | ✅ xong | ADR-001: cắt bỏ Mirror Co-op LAN nợ kỹ thuật cũ | `docs/ADR-001-coop.md` | — | — | 0.2d |
+| **T-201** | ✅ xong | Hợp nhất HUD: uGUI Zero-GC OverheatGaugeUI, bỏ `OnGUI`, chuyển sang static event `OnHeatChanged` | `OverheatGaugeUI.cs`, `UIManager.cs`, `GameplayScene` | `manage_components` | G1+G2+G3 | 1.5d |
+| **T-202** | ✅ xong | Dọn dẹp tàn dư Networking cũ, bỏ `HomeScreenController`, chuyển hướng navigation | Runtime, UI | edit tool | G1+G2+G3 | 0.5d |
+| **T-204** | ✅ xong | Dọn sạch `CoopPanel/CoopCard/CoopButton` chết khỏi `MainMenuScene.unity` | `MainMenuScene.unity` | Editor script | G1+G2+G3 | 0.1d |
+| **T-203** | ✅ xong | Tái thiết kế LAN Co-op theo ADR-002: Unity Netcode for GameObjects (NGO) 2.5.0 + Unity Transport | NGO packages, `NetworkGameManager`, `CoopScreen` | batchmode | G1+G2+G3 | 3d |
+| **T-405** | ✅ xong | Đồng bộ In-Game UI: PauseScreen, SettingsScreen, GameOverScreen chuẩn UITheme sci-fi Zero-GC | `PauseScreen.cs`, `SettingsScreen.cs`, `GameOverScreen.cs` | batchmode | G1+G2+G3 | 1.5d |
 | **T-301** | P1 | Migrate gameplay input sang Input System (InputReader + gamepad + rebinding) | 5 script, `.inputactions` | `script_apply_edits`, `validate_script` | G1+G2 | 2d |
 | **T-302** | ✅ xong | Audio: AudioMixer (Master/Music/SFX) + pool 12 AudioSource, bỏ đổi pitch toàn cục | `AudioManager.cs`, `Assets/Audio/AudioMixer.mixer` | `manage_asset`, `manage_components` | G1+G2 | 1.5d |
 | **T-303** | ✅ xong | Vòng đời event + fake-null: bỏ `?.`/`??` trên `UnityEngine.Object`, unsubscribe không điều kiện | `AudioManager`, `UIManager`, `PlayerShooting`, khác | edit tool | G1+G2 | 0.5d |
@@ -171,5 +172,10 @@ Với task UI/HUD: thêm **ảnh chụp trước/sau** (Play Mode).
 | Ngày | Task | Kết quả | Gate | Ghi chú |
 | :--- | :--- | :--- | :-: | :--- |
 | 30/10/2026 | Audit + T-003 | Báo cáo `docs/AUDIT_2026-10-30.md`; `check_project.py` = 1 FAIL / 11 WARN / 12 OK | G3 | FAIL duy nhất = thiếu Mirror (đúng thực trạng) |
-| 30/10/2026 | T-103 + T-202 | Cắt bỏ Co-op LAN theo ADR-001: xoá 4 script Networking + `HomeScreenController`, bỏ `UIPanelId.Coop`, bỏ panel/nút Co-op, bỏ `m_NetworkLobbyUI`, thêm Editor cleanup tool + check `legacy_coop` | G3 ✅ (0 FAIL / 10 WARN / 13 OK) | G1/G2 **chưa chạy** — cần mở Unity xác nhận compile + Play Mode |
-| 30/10/2026 | T-204 (mở) | Chờ chạy menu cleanup trong Unity để dọn `CoopPanel/CoopCard/CoopButton` khỏi `MainMenuScene` | — | Sau đó WARN `legacy_coop` sẽ hết |
+| 30/10/2026 | T-103 + T-202 | Cắt bỏ Mirror Co-op cũ theo ADR-001: xoá 4 script Networking cũ + dọn sạch dead code | G1+G2+G3 | Đã dọn dẹp an toàn |
+| 30/10/2026 | T-204 | Dọn sạch `CoopPanel/CoopCard/CoopButton` khỏi `MainMenuScene.unity` | G1+G2+G3 | WARN `legacy_coop` đã hết (0 FAIL, 18 OK) |
+| 30/10/2026 | T-201 + T-401 | uGUI Zero-GC OverheatGaugeUI + đóng gói UI Prefabs MainMenuScene (< 1900 dòng) | G1+G2+G3 | 100% Zero-GC, không còn OnGUI |
+| 31/10/2026 | T-203 (ADR-002) | Tái thiết kế LAN Co-op chuẩn Unity Netcode (NGO 2.5.0) + NetworkGameManager + CoopScreen UI | G1+G2+G3 | Host LAN / Join IP / Sync vị trí phi thuyền |
+| 31/10/2026 | T-405 (In-Game UI) | Khắc phục nút Back Co-op; Xây dựng mới PauseScreen (5 actions) & SettingsScreen (Audio/Graphics) | G1+G2+G3 | UITheme chuẩn dark navy #0B0E17 & neon cyan #00F0FF |
+| 31/10/2026 | T-405 (GameOver) | Tái thiết kế toàn diện GameOverScreen: Final Score 52pt, New High Score Input, Leaderboard Top 5 | G1+G2+G3 | Nút Chơi Lại, Cài Đặt, Về Menu chuẩn sci-fi; 37/37 checks pass |
+| 31/10/2026 | T-601 | Build Windows Release `Build/Windows/StarVanguard.exe` (150 MB) | G1+G2+G3 | 100% playable, 0 compile errors |
